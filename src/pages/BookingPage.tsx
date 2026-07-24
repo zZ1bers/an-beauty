@@ -13,7 +13,9 @@ import './Portal.css'
 
 type Service = {
   id: string
+  categoryId: string
   name: { ru: string; de: string }
+  description: { ru: string; de: string }
   price: number
   duration: number
   image: string
@@ -27,11 +29,68 @@ type Master = {
   specialties: string[]
 }
 
+type Category = {
+  id: string
+  slug: string
+  icon: string
+  name: { ru: string; de: string }
+}
+
+type ActivePromo = {
+  id: string
+  discountPct: number | null
+  serviceIds: string[]
+}
+
 type ContactForm = {
   firstName: string
   lastName: string
   email: string
   phone: string
+}
+
+function discountedPrice(original: number, pct: number) {
+  return Math.round((original * (100 - pct)) / 100)
+}
+
+function promoForService(serviceId: string, promos: ActivePromo[]) {
+  let best = 0
+  for (const p of promos) {
+    const pct = p.discountPct ?? 0
+    if (pct <= 0) continue
+    if (p.serviceIds.length === 0 || p.serviceIds.includes(serviceId)) {
+      best = Math.max(best, pct)
+    }
+  }
+  return best > 0 ? best : null
+}
+
+function ServicePrice({
+  price,
+  duration,
+  discountPct,
+}: {
+  price: number
+  duration?: number
+  discountPct: number | null
+}) {
+  if (discountPct) {
+    const next = discountedPrice(price, discountPct)
+    return (
+      <span className="booking__price">
+        <s className="booking__price-old">€{price}</s>
+        <strong className="booking__price-new">€{next}</strong>
+        <span className="booking__price-badge">−{discountPct}%</span>
+        {duration != null && <span className="booking__price-dur">· {duration} min</span>}
+      </span>
+    )
+  }
+  return (
+    <span className="booking__price">
+      €{price}
+      {duration != null && <span className="booking__price-dur"> · {duration} min</span>}
+    </span>
+  )
 }
 
 function defaultDate() {
@@ -58,11 +117,24 @@ export function BookingPage() {
   const { user, acceptSession, refresh } = useAuth()
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const [step, setStep] = useState(0)
+  const initialMaster = params.get('master') ?? ''
+  const initialService = params.get('service') ?? ''
+  /** From masters CTA → master first; from services / default → service first */
+  const masterFirst = Boolean(initialMaster) && !initialService
+  const [step, setStep] = useState(() => {
+    if (initialMaster && initialService) return 2
+    if (initialMaster || initialService) return 1
+    return 0
+  })
   const [services, setServices] = useState<Service[]>([])
   const [masters, setMasters] = useState<Master[]>([])
-  const [serviceId, setServiceId] = useState(params.get('service') ?? '')
-  const [masterId, setMasterId] = useState(params.get('master') ?? '')
+  const [categories, setCategories] = useState<Category[]>([])
+  const [promos, setPromos] = useState<ActivePromo[]>([])
+  const [serviceId, setServiceId] = useState(initialService)
+  const [masterId, setMasterId] = useState(initialMaster)
+  const [browseCategoryId, setBrowseCategoryId] = useState('')
+  const [browseMasterId, setBrowseMasterId] = useState('')
+  const [detailService, setDetailService] = useState<Service | null>(null)
   const [date, setDate] = useState(defaultDate())
   const [slot, setSlot] = useState('')
   const [slots, setSlots] = useState<string[]>([])
@@ -84,9 +156,13 @@ export function BookingPage() {
     void Promise.all([
       api<Service[]>('/services', { auth: false }),
       api<Master[]>('/masters', { auth: false }),
-    ]).then(([s, m]) => {
+      api<Category[]>('/categories', { auth: false }),
+      api<ActivePromo[]>('/promos/active', { auth: false }),
+    ]).then(([s, m, c, p]) => {
       setServices(s)
       setMasters(m)
+      setCategories(c)
+      setPromos(p)
     })
   }, [])
 
@@ -146,15 +222,65 @@ export function BookingPage() {
     return masters.filter((m) => m.specialties.includes(serviceId))
   }, [serviceId, masters])
 
+  const filteredServices = useMemo(() => {
+    if (!masterId) return services
+    const master = masters.find((m) => m.id === masterId)
+    if (!master) return services
+    return services.filter((s) => master.specialties.includes(s.id))
+  }, [masterId, masters, services])
+
   const selectedService = services.find((s) => s.id === serviceId)
   const selectedMaster = masters.find((m) => m.id === masterId)
+  const selectedDiscount = selectedService
+    ? promoForService(selectedService.id, promos)
+    : null
 
-  const steps = [t.booking.step1, t.booking.step2, t.booking.step3, t.booking.step4]
+
+  const steps = masterFirst
+    ? [t.booking.stepMaster, t.booking.stepService, t.booking.step3, t.booking.step4]
+    : [t.booking.stepService, t.booking.stepMaster, t.booking.step3, t.booking.step4]
+
   const canNext =
-    (step === 0 && !!serviceId) ||
-    (step === 1 && !!masterId) ||
+    (step === 0 && (masterFirst ? !!masterId : !!serviceId)) ||
+    (step === 1 && (masterFirst ? !!serviceId : !!masterId)) ||
     (step === 2 && !!slot) ||
     step === 3
+
+  const pickMaster = (id: string) => {
+    setMasterId(id)
+    const master = masters.find((m) => m.id === id)
+    if (serviceId && master && !master.specialties.includes(serviceId)) {
+      setServiceId('')
+    }
+  }
+
+  const pickService = (id: string) => {
+    setServiceId(id)
+    if (masterId) {
+      const master = masters.find((m) => m.id === masterId)
+      if (master && !master.specialties.includes(id)) {
+        setMasterId('')
+      }
+    }
+  }
+
+  const showMasterStep = masterFirst ? step === 0 : step === 1
+  const showServiceStep = masterFirst ? step === 1 : step === 0
+  const mastersForPick = serviceId ? filteredMasters : masters
+
+  const servicesForPick = useMemo(() => {
+    let list = masterId ? filteredServices : services
+    if (browseCategoryId) {
+      list = list.filter((s) => s.categoryId === browseCategoryId)
+    }
+    if (!masterId && browseMasterId) {
+      const master = masters.find((m) => m.id === browseMasterId)
+      if (master) {
+        list = list.filter((s) => master.specialties.includes(s.id))
+      }
+    }
+    return list
+  }, [masterId, filteredServices, services, browseCategoryId, browseMasterId, masters])
 
   const needsContact =
     showContact ||
@@ -253,7 +379,7 @@ export function BookingPage() {
 
   return (
     <main className="booking page-enter page-shell">
-      <div className="page-shell__main">
+      <div className="page-shell__main page-shell__main--top">
       <div className="booking__wrap">
         <header className="booking__head">
           <p className="eyebrow">{t.booking.eyebrow}</p>
@@ -282,33 +408,93 @@ export function BookingPage() {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             >
-              {step === 0 && (
-                <div className="booking__grid">
-                  {services.map((s) => (
-                    <button
-                      key={s.id}
-                      className={`booking__service ${serviceId === s.id ? 'is-selected' : ''}`}
-                      onClick={() => setServiceId(s.id)}
-                    >
-                      <img src={s.image} alt="" />
-                      <div>
-                        <strong className="serif">{s.name[locale]}</strong>
-                        <span>
-                          €{s.price} · {s.duration} min
-                        </span>
+              {showServiceStep && (
+                <div className="booking__service-step">
+                  <div className="booking__filters">
+                    <div className="booking__filter-row">
+                      <span className="booking__filter-label">{t.booking.filterCategory}</span>
+                      <div className="booking__filter-chips" role="group" aria-label={t.booking.filterCategory}>
+                        <button
+                          type="button"
+                          className={`booking__chip ${!browseCategoryId ? 'is-active' : ''}`}
+                          onClick={() => setBrowseCategoryId('')}
+                        >
+                          {t.booking.allCategories}
+                        </button>
+                        {categories.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            className={`booking__chip ${browseCategoryId === c.id ? 'is-active' : ''}`}
+                            onClick={() => setBrowseCategoryId(c.id)}
+                          >
+                            {c.icon ? <span className="booking__chip-icon">{c.icon}</span> : null}
+                            {c.name[locale]}
+                          </button>
+                        ))}
                       </div>
-                    </button>
-                  ))}
+                    </div>
+
+                    {!masterId && (
+                      <div className="booking__filter-row">
+                        <span className="booking__filter-label">{t.booking.filterMaster}</span>
+                        <div className="booking__filter-chips" role="group" aria-label={t.booking.filterMaster}>
+                          <button
+                            type="button"
+                            className={`booking__chip ${!browseMasterId ? 'is-active' : ''}`}
+                            onClick={() => setBrowseMasterId('')}
+                          >
+                            {t.booking.allMasters}
+                          </button>
+                          {masters.map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              className={`booking__chip booking__chip--master ${browseMasterId === m.id ? 'is-active' : ''}`}
+                              onClick={() => setBrowseMasterId(m.id)}
+                            >
+                              <img src={m.image} alt="" className="booking__chip-avatar" />
+                              {m.name.split(' ')[0]}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="booking__grid">
+                    {servicesForPick.length === 0 && (
+                      <p className="booking__no-slots">{t.booking.emptyServices}</p>
+                    )}
+                    {servicesForPick.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className={`booking__service ${serviceId === s.id ? 'is-selected' : ''}`}
+                        onClick={() => setDetailService(s)}
+                      >
+                        <img src={s.image} alt="" />
+                        <div>
+                          <strong className="serif">{s.name[locale]}</strong>
+                          <ServicePrice
+                            price={s.price}
+                            duration={s.duration}
+                            discountPct={promoForService(s.id, promos)}
+                          />
+                          <em className="booking__service-hint">{t.booking.viewDetails}</em>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {step === 1 && (
+              {showMasterStep && (
                 <div className="booking__masters">
-                  {filteredMasters.map((m) => (
+                  {mastersForPick.map((m) => (
                     <button
                       key={m.id}
                       className={`booking__master ${masterId === m.id ? 'is-selected' : ''}`}
-                      onClick={() => setMasterId(m.id)}
+                      onClick={() => pickMaster(m.id)}
                     >
                       <img src={m.image} alt={m.name} />
                       <div>
@@ -356,7 +542,12 @@ export function BookingPage() {
                       <p>
                         {selectedMaster?.name} · {date} · {slot}
                       </p>
-                      <strong>€{selectedService?.price}</strong>
+                      {selectedService && (
+                        <ServicePrice
+                          price={selectedService.price}
+                          discountPct={selectedDiscount}
+                        />
+                      )}
                     </div>
                   </div>
 
@@ -507,6 +698,49 @@ export function BookingPage() {
             {t.booking.authGuest}
           </button>
         </div>
+      </Modal>
+
+      <Modal
+        open={!!detailService}
+        title={detailService?.name[locale] ?? ''}
+        onClose={() => setDetailService(null)}
+        wide
+      >
+        {detailService && (
+          <div className="booking__detail">
+            <img src={detailService.image} alt="" className="booking__detail-img" />
+            <p className="booking__detail-meta">
+              <ServicePrice
+                price={detailService.price}
+                duration={detailService.duration}
+                discountPct={promoForService(detailService.id, promos)}
+              />
+            </p>
+            <p className="booking__detail-body">{detailService.description[locale]}</p>
+            <div className="booking__detail-actions">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setDetailService(null)}
+              >
+                {t.booking.back}
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  pickService(detailService.id)
+                  if (!masterId && browseMasterId) {
+                    pickMaster(browseMasterId)
+                  }
+                  setDetailService(null)
+                }}
+              >
+                {t.booking.selectService}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       <Footer />

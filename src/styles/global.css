@@ -37,6 +37,8 @@
   --ease-lux: cubic-bezier(0.22, 1, 0.36, 1);
 
   --nav-h: 72px;
+  --layout-max: 1280px;
+  --layout-pad: 1.5rem;
   --glow-coral: 0 0 60px var(--coral-glow);
   --glow-green: 0 0 40px var(--green-glow);
 
@@ -180,6 +182,104 @@ body::before {
   width: 100%;
 }
 
+.layout-container {
+  width: 100%;
+  max-width: var(--layout-max);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (min-width: 900px) {
+  :root {
+    --layout-pad: 3rem;
+  }
+}
+
+/* Shared animated coral sweep on hairlines */
+.lux-line {
+  position: relative;
+  height: 1px;
+  overflow: hidden;
+  background: var(--stroke);
+}
+
+.lux-line::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, var(--coral), transparent);
+  animation: luxLineDash 2.8s var(--ease-lux) infinite;
+}
+
+.lux-line--vertical {
+  width: 1px;
+  height: auto;
+  min-height: 4rem;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+.lux-line--vertical::after {
+  inset: 0 0 auto 0;
+  width: 100%;
+  height: 40%;
+  background: linear-gradient(180deg, transparent, var(--coral), transparent);
+  animation-name: luxLineDashY;
+}
+
+@keyframes luxLineDash {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(320%); }
+}
+
+@keyframes luxLineDashY {
+  0% { transform: translateY(-120%); }
+  100% { transform: translateY(320%); }
+}
+
+.section-heading {
+  display: flex;
+  align-items: stretch;
+  gap: 1.15rem;
+}
+
+.section-heading__text {
+  min-width: 0;
+  flex: 1;
+}
+
+.section-heading--end {
+  flex-direction: row-reverse;
+}
+
+.section-heading--end .section-heading__text {
+  text-align: right;
+}
+
+.section-heading--center {
+  flex-direction: column;
+  align-items: center;
+  gap: 0.95rem;
+}
+
+.section-heading--center .lux-line--vertical {
+  min-height: 2.85rem;
+  height: 2.85rem;
+  align-self: center;
+}
+
+/* Anchor targets clear the fixed nav */
+#services,
+#masters,
+#about,
+#ritual,
+#studio,
+#voices,
+#atmosphere {
+  scroll-margin-top: calc(var(--nav-h) + 1.25rem);
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -236,6 +336,26 @@ ol {
   letter-spacing: 0.28em;
   text-transform: uppercase;
   color: var(--coral);
+}
+
+.heading-lux,
+.manifesto__title,
+.ritual__title,
+.services__title,
+.masters__title,
+.voices__title,
+.experience__title {
+  background: linear-gradient(135deg, var(--text) 0%, var(--beige) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.studio__title {
+  background: linear-gradient(135deg, #f4efe9 0%, var(--beige) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .glass {

@@ -1,0 +1,101 @@
+.legal {
+  padding: calc(var(--nav-h) + 2.5rem) 0 4rem;
+  max-width: 48rem;
+}
+
+.legal__eyebrow {
+  margin-bottom: 0.75rem;
+}
+
+.legal__title {
+  font-size: clamp(2.25rem, 5vw, 3.25rem);
+  margin: 0 0 0.75rem;
+  color: var(--text);
+}
+
+.legal__lead {
+  margin: 0 0 2.5rem;
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+.legal__note {
+  margin: 0 0 2rem;
+  padding: 1rem 1.15rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(231, 113, 125, 0.35);
+  background: rgba(231, 113, 125, 0.08);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.legal h2 {
+  margin: 2.25rem 0 0.75rem;
+  font-size: 1.15rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.legal h3 {
+  margin: 1.35rem 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.legal p,
+.legal li {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.legal p {
+  margin: 0 0 0.85rem;
+}
+
+.legal ul {
+  margin: 0 0 1rem;
+  padding-left: 1.2rem;
+}
+
+.legal li {
+  margin-bottom: 0.35rem;
+}
+
+.legal a {
+  color: var(--coral);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.legal a:hover {
+  color: var(--coral-deep);
+}
+
+.legal__placeholder {
+  display: inline;
+  padding: 0.05em 0.35em;
+  border-radius: 0.3em;
+  background: rgba(231, 113, 125, 0.14);
+  color: var(--coral-deep);
+  font-weight: 600;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.legal__back {
+  display: inline-flex;
+  margin-top: 2.5rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.legal__back:hover {
+  color: var(--coral);
+}

@@ -1,0 +1,113 @@
+.promo-gift-wrap {
+  position: fixed;
+  top: -6rem;
+  z-index: 70;
+  width: 72px;
+  height: 72px;
+  pointer-events: none;
+}
+
+.promo-gift {
+  pointer-events: auto;
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  margin: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(231, 113, 125, 0.55);
+  background: linear-gradient(145deg, #f08a94 0%, var(--coral-deep) 100%);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow:
+    0 12px 28px rgba(231, 113, 125, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  overflow: hidden;
+  transform-origin: center center;
+}
+
+.promo-gift--alive {
+  animation: promoCircleBob 2.2s ease-in-out infinite;
+}
+
+.promo-gift__face {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.08rem;
+  line-height: 1;
+  transform: none !important;
+  animation: none !important;
+}
+
+.promo-gift__icon {
+  display: block;
+  flex-shrink: 0;
+  transform: none !important;
+  animation: none !important;
+}
+
+.promo-gift__pct {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(26, 21, 18, 0.35);
+  transform: none !important;
+  animation: none !important;
+}
+
+@keyframes promoCircleBob {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    box-shadow:
+      0 12px 28px rgba(231, 113, 125, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+  50% {
+    transform: translateY(-5px) scale(1.03);
+    box-shadow:
+      0 16px 32px rgba(231, 113, 125, 0.46),
+      inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .promo-gift--alive {
+    animation: none;
+  }
+}
+
+.promo-gift-modal__badge {
+  display: inline-flex;
+  margin: 0 0 0.75rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(231, 113, 125, 0.16);
+  border: 1px solid rgba(231, 113, 125, 0.4);
+  color: var(--coral);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.promo-gift-modal__body {
+  margin: 0 0 1.25rem;
+  font-size: 0.98rem;
+  line-height: 1.65;
+  color: var(--text-muted);
+  white-space: pre-line;
+}
+
+.promo-gift-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}

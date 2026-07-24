@@ -182,7 +182,7 @@ export async function adminRoutes(app: FastifyInstance) {
   app.get('/admin/services', adminOnly, async () => {
     const rows = await prisma.service.findMany({
       orderBy: { sortOrder: 'asc' },
-      include: { category: true },
+      include: { category: true, masters: true },
     })
     return rows.map((s) => ({
       ...s,
@@ -191,6 +191,7 @@ export async function adminRoutes(app: FastifyInstance) {
       description: { ru: s.descriptionRu, de: s.descriptionDe },
       image: s.imageUrl,
       duration: s.durationMin,
+      masterIds: s.masters.map((m) => m.masterId),
     }))
   })
 
@@ -205,37 +206,72 @@ export async function adminRoutes(app: FastifyInstance) {
         descriptionDe: z.string(),
         price: z.number(),
         durationMin: z.number().int().positive(),
-                imageUrl: z.string().min(1),
-                featured: z.boolean().optional(),
-                sortOrder: z.number().optional(),
-              })
-              .safeParse(request.body)
-            if (!body.success) return reply.status(400).send({ error: 'Invalid body' })
-            const row = await prisma.service.create({ data: body.data })
-            return reply.status(201).send(row)
-          })
-
-          app.patch('/admin/services/:id', adminOnly, async (request, reply) => {
-            const { id } = request.params as { id: string }
-            const body = z
-              .object({
-                categoryId: z.string().optional(),
-                nameRu: z.string().optional(),
-                nameDe: z.string().optional(),
-                descriptionRu: z.string().optional(),
-                descriptionDe: z.string().optional(),
-                price: z.number().optional(),
-                durationMin: z.number().int().positive().optional(),
-                imageUrl: z.string().min(1).optional(),
+        imageUrl: z.string().min(1),
         featured: z.boolean().optional(),
-        isActive: z.boolean().optional(),
         sortOrder: z.number().optional(),
+        masterIds: z.array(z.string()).optional(),
       })
       .safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: 'Invalid body' })
+    const { masterIds, ...data } = body.data
+    const row = await prisma.service.create({
+      data: {
+        ...data,
+        masters: masterIds?.length
+          ? { create: masterIds.map((masterId) => ({ masterId })) }
+          : undefined,
+      },
+      include: { masters: true },
+    })
+    return reply.status(201).send({
+      ...row,
+      price: Number(row.price),
+      masterIds: row.masters.map((m) => m.masterId),
+    })
+  })
+
+  app.patch('/admin/services/:id', adminOnly, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const body = z
+      .object({
+        categoryId: z.string().optional(),
+        nameRu: z.string().optional(),
+        nameDe: z.string().optional(),
+        descriptionRu: z.string().optional(),
+        descriptionDe: z.string().optional(),
+        price: z.number().optional(),
+        durationMin: z.number().int().positive().optional(),
+        imageUrl: z.string().min(1).optional(),
+        featured: z.boolean().optional(),
+        isActive: z.boolean().optional(),
+        sortOrder: z.number().optional(),
+        masterIds: z.array(z.string()).optional(),
+      })
+      .safeParse(request.body)
+    if (!body.success) return reply.status(400).send({ error: 'Invalid body' })
+
+    const { masterIds, ...data } = body.data
     try {
-      const row = await prisma.service.update({ where: { id }, data: body.data })
-      return { ...row, price: Number(row.price) }
+      if (masterIds) {
+        await prisma.$transaction(async (tx) => {
+          await tx.masterService.deleteMany({ where: { serviceId: id } })
+          if (masterIds.length) {
+            await tx.masterService.createMany({
+              data: masterIds.map((masterId) => ({ masterId, serviceId: id })),
+            })
+          }
+        })
+      }
+      const row = await prisma.service.update({
+        where: { id },
+        data,
+        include: { masters: true },
+      })
+      return {
+        ...row,
+        price: Number(row.price),
+        masterIds: row.masters.map((m) => m.masterId),
+      }
     } catch {
       return reply.status(404).send({ error: 'Not found' })
     }
@@ -440,7 +476,11 @@ export async function adminRoutes(app: FastifyInstance) {
       price: Number(b.priceSnapshot),
       client: `${b.client.user.firstName} ${b.client.user.lastName}`,
       clientId: b.clientId,
-      service: { id: b.service.id, name: { ru: b.service.nameRu, de: b.service.nameDe } },
+      service: {
+        id: b.service.id,
+        categoryId: b.service.categoryId,
+        name: { ru: b.service.nameRu, de: b.service.nameDe },
+      },
       master: {
         id: b.master.id,
         name: `${b.master.user.firstName} ${b.master.user.lastName}`,

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Clock3, NotebookPen, Users, Activity, CalendarRange, LogOut } from 'lucide-react'
+import { Clock3, NotebookPen, Users, Activity, CalendarRange, LogOut, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useLang } from '../i18n/LanguageContext'
 import { useAuth } from '../auth/AuthContext'
@@ -40,6 +40,13 @@ type Schedule = {
   timeOffs: TimeOff[]
 }
 
+type CatalogService = {
+  id: string
+  name: { ru: string; de: string }
+  price: number
+  duration: number
+}
+
 /** JS getDay(): 0=Sun … 6=Sat — display Mon→Sun like Google Calendar (EU) */
 const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0]
 const DAY_LABELS_RU = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
@@ -72,7 +79,7 @@ export function StaffPage() {
   const navigate = useNavigate()
   const toast = useToast()
 
-  const [view, setView] = useState<'day' | 'schedule'>('day')
+  const [view, setView] = useState<'day' | 'schedule' | 'services'>('day')
   const [date, setDate] = useState(todayISO())
   const [calendarMonth, setCalendarMonth] = useState(startOfMonth(todayISO()))
   const [bookings, setBookings] = useState<MasterBooking[]>([])
@@ -81,6 +88,8 @@ export function StaffPage() {
   const [hoursDraft, setHoursDraft] = useState<
     { dayOfWeek: number; startTime: string; endTime: string; enabled: boolean }[]
   >([])
+  const [catalog, setCatalog] = useState<CatalogService[]>([])
+  const [specialtyIds, setSpecialtyIds] = useState<string[]>([])
   const [note, setNote] = useState('')
   const [noteClientId, setNoteClientId] = useState('')
   const [loading, setLoading] = useState(true)
@@ -97,14 +106,18 @@ export function StaffPage() {
     try {
       const from = startOfMonth(calendarMonth)
       const to = addDays(addMonths(calendarMonth, 1), 7)
-      const [b, l, s] = await Promise.all([
+      const [b, l, s, catalogRows, me] = await Promise.all([
         api<MasterBooking[]>(`/master/bookings?date=${date}`),
         api<{ load: number }>(`/master/load?date=${date}`),
         api<Schedule>(`/master/schedule?from=${from}&to=${to}`),
+        api<CatalogService[]>('/services', { auth: false }),
+        api<{ specialties: string[] }>('/master/me'),
       ])
       setBookings(b)
       setLoad(l.load)
       setSchedule(s)
+      setCatalog(catalogRows)
+      setSpecialtyIds(me.specialties)
       setHoursDraft(
         [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => {
           const existing = s.workingHours.find((h) => h.dayOfWeek === dayOfWeek)
@@ -336,6 +349,27 @@ export function StaffPage() {
     }
   }
 
+  const toggleSpecialty = (id: string) => {
+    setSpecialtyIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
+  }
+
+  const saveServices = async () => {
+    setBusyAction(true)
+    try {
+      await api('/master/services', {
+        method: 'PUT',
+        body: JSON.stringify({ specialtyIds }),
+      })
+      toast.push(t.staff.servicesSaved)
+    } catch (e) {
+      toast.push(e instanceof ApiError ? e.message : 'Error', 'err')
+    } finally {
+      setBusyAction(false)
+    }
+  }
+
   return (
     <main className="portal page-enter">
       <div className="portal__wrap">
@@ -360,6 +394,13 @@ export function StaffPage() {
               >
                 <CalendarRange size={14} />
                 {t.staff.schedule}
+              </button>
+              <button
+                className={`admin__tab ${view === 'services' ? 'is-active' : ''}`}
+                onClick={() => setView('services')}
+              >
+                <Sparkles size={14} />
+                {t.staff.myServices}
               </button>
             </div>
           </div>
@@ -675,6 +716,45 @@ export function StaffPage() {
               </div>
             </section>
           </div>
+        )}
+
+        {!loading && view === 'services' && (
+          <section className="portal__panel glass-strong">
+            <div className="portal__panel-head">
+              <Sparkles size={18} />
+              <h2>{t.staff.myServices}</h2>
+            </div>
+            <p className="portal__hint" style={{ marginBottom: '1.25rem' }}>
+              {t.staff.myServicesHint}
+            </p>
+            <div className="admin__checkboxes">
+              {catalog.map((s) => (
+                <label key={s.id} className="admin__check">
+                  <input
+                    type="checkbox"
+                    checked={specialtyIds.includes(s.id)}
+                    onChange={() => toggleSpecialty(s.id)}
+                  />
+                  <span>
+                    {s.name[locale]}
+                    <em style={{ display: 'block', opacity: 0.65, fontStyle: 'normal', fontSize: '0.8rem' }}>
+                      €{s.price} · {s.duration} min
+                    </em>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <div style={{ marginTop: '1.5rem' }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={busyAction}
+                onClick={() => void saveServices()}
+              >
+                {t.admin.save}
+              </button>
+            </div>
+          </section>
         )}
       </div>
     </main>

@@ -44,8 +44,8 @@ export function LoginPage() {
           lastName: 'Фамилия',
           phone: 'Телефон',
           submit: mode === 'login' ? 'Войти' : 'Создать аккаунт',
-          switch:
-            mode === 'login' ? 'Нет аккаунта? Регистрация' : 'Уже есть аккаунт? Войти',
+          switchHint: mode === 'login' ? 'Нет аккаунта?' : 'Уже есть аккаунт?',
+          switchAction: mode === 'login' ? 'Регистрация' : 'Войти',
           demo: 'Демо: admin@an.beauty / admin123 · elena@an.beauty / master123 · you@an.beauty / client123',
         }
       : {
@@ -57,8 +57,8 @@ export function LoginPage() {
           lastName: 'Nachname',
           phone: 'Telefon',
           submit: mode === 'login' ? 'Einloggen' : 'Konto erstellen',
-          switch:
-            mode === 'login' ? 'Kein Konto? Registrieren' : 'Bereits Konto? Anmelden',
+          switchHint: mode === 'login' ? 'Kein Konto?' : 'Bereits Konto?',
+          switchAction: mode === 'login' ? 'Registrieren' : 'Anmelden',
           demo: 'Demo: admin@an.beauty / admin123 · elena@an.beauty / master123 · you@an.beauty / client123',
         }
 
@@ -157,13 +157,15 @@ export function LoginPage() {
             setError('')
           }}
         >
-          {copy.switch}
+          <span className="login__switch-hint">{copy.switchHint}</span>
+          <span className="login__switch-action">{copy.switchAction}</span>
         </button>
 
         <p className="login__demo">{copy.demo}</p>
-        <Link to="/" className="login__home">
-          ← AN.Beauty
-        </Link>
+        <div className="login__legal">
+          <Link to="/impressum">Impressum</Link>
+          <Link to="/datenschutz">Datenschutz</Link>
+        </div>
       </motion.form>
     </main>
   )

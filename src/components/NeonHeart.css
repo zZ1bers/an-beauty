@@ -1,0 +1,60 @@
+.neon-heart {
+  --tilt: -8deg;
+  display: none;
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  color: var(--coral);
+  transform: translateY(-50%) rotate(var(--tilt));
+  animation: neonHeartFloat 5.2s ease-in-out infinite;
+  filter:
+    drop-shadow(0 0 6px rgba(231, 113, 125, 0.55))
+    drop-shadow(0 0 18px rgba(231, 113, 125, 0.32));
+}
+
+.neon-heart svg {
+  fill: none;
+  stroke: currentColor;
+  display: block;
+}
+
+/* edge ≈ screen edge · mid · near ≈ closer to content column */
+.neon-heart--left.neon-heart--edge {
+  left: clamp(0.4rem, 1.2vw, 1.5rem);
+}
+
+.neon-heart--right.neon-heart--edge {
+  right: clamp(0.4rem, 1.2vw, 1.5rem);
+}
+
+.neon-heart--left.neon-heart--mid {
+  left: clamp(1.25rem, 3.4vw, 4.5rem);
+}
+
+.neon-heart--right.neon-heart--mid {
+  right: clamp(1.25rem, 3.4vw, 4.5rem);
+}
+
+.neon-heart--left.neon-heart--near {
+  left: clamp(2.75rem, 6.5vw, 8.5rem);
+}
+
+.neon-heart--right.neon-heart--near {
+  right: clamp(2.75rem, 6.5vw, 8.5rem);
+}
+
+@keyframes neonHeartFloat {
+  0%, 100% {
+    transform: translateY(-50%) rotate(var(--tilt)) scale(1);
+  }
+  50% {
+    transform: translateY(calc(-50% - 9px)) rotate(calc(var(--tilt) + 4deg)) scale(1.05);
+  }
+}
+
+@media (min-width: 1200px) {
+  .neon-heart {
+    display: grid;
+    place-items: center;
+  }
+}

@@ -1,0 +1,117 @@
+.ritual {
+  position: relative;
+  padding: 5.5rem var(--layout-pad);
+  overflow: visible;
+}
+
+.ritual__inner {
+  max-width: var(--layout-max);
+  margin: 0 auto;
+}
+
+.ritual__head {
+  margin: 0 0 3rem auto;
+  max-width: 34rem;
+}
+
+.ritual__title {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  margin: 0.75rem 0 1rem;
+}
+
+.ritual__sub {
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+.ritual__body {
+  display: grid;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.ritual__steps {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--stroke);
+  min-width: 0;
+}
+
+.ritual__step {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1.25rem;
+  padding: 1.75rem 0;
+  border-bottom: 1px solid var(--stroke);
+  text-align: right;
+  justify-items: end;
+}
+
+.ritual__num {
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  color: var(--coral);
+  padding-top: 0.45rem;
+}
+
+.ritual__copy {
+  max-width: 52ch;
+}
+
+.ritual__step h3 {
+  margin: 0 0 0.55rem;
+  font-size: clamp(1.55rem, 3vw, 2rem);
+}
+
+.ritual__step p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.ritual__visual {
+  display: none;
+  position: relative;
+  align-self: stretch;
+  width: 100%;
+  min-height: 420px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg-elevated);
+}
+
+.ritual__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  display: block;
+  filter: saturate(0.92) contrast(1.02);
+}
+
+@media (min-width: 800px) {
+  .ritual {
+    padding: 7rem var(--layout-pad);
+  }
+
+  .ritual__step {
+    gap: 2.5rem;
+    padding: 2.15rem 0;
+  }
+}
+
+@media (min-width: 960px) {
+  .ritual__body {
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 3.25rem;
+    align-items: stretch;
+  }
+
+  .ritual__visual {
+    display: block;
+  }
+}

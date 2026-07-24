@@ -1,5 +1,5 @@
 .cabinet {
-  padding-top: calc(var(--nav-h) + 3.5rem);
+  padding-top: calc(var(--nav-h) + 4.5rem);
   overflow-x: clip;
 }
 
@@ -381,7 +381,7 @@
 
 @media (min-width: 720px) {
   .cabinet {
-    padding-top: calc(var(--nav-h) + 4.25rem);
+    padding-top: calc(var(--nav-h) + 5rem);
   }
 
   .cabinet__promo {

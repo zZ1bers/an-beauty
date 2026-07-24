@@ -77,9 +77,9 @@ export function Hero() {
           <Link to="/booking" className="btn btn-primary">
             {t.hero.cta}
           </Link>
-          <a href="#about" className="btn btn-ghost">
+          <a href="#about" className="btn btn-ghost hero__cta-explore">
             {t.hero.explore}
-            <ArrowDownRight size={16} />
+            <ArrowDownRight size={16} className="hero__cta-arrow" aria-hidden />
           </a>
         </motion.div>
       </motion.div>

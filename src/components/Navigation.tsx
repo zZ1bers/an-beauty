@@ -1,13 +1,14 @@
-import { Link, NavLink, useLocation } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, Globe, LogOut, Bell, Sun, Moon } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type MouseEvent } from 'react'
 import { useLang } from '../i18n/LanguageContext'
 import { useTheme } from '../theme/ThemeContext'
 import { useAuth, homeForRole } from '../auth/AuthContext'
 import { api, ApiError } from '../lib/api'
 import { Drawer } from './ui/Drawer'
 import { useToast } from './ui/Toast'
+import { scrollToHash } from './HashScroll'
 import './Navigation.css'
 
 type NotificationItem = {
@@ -23,6 +24,7 @@ export function Navigation() {
   const { theme, toggleTheme } = useTheme()
   const { user, logout } = useAuth()
   const toast = useToast()
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
@@ -36,12 +38,39 @@ export function Navigation() {
   const clientName = isClient && user ? user.firstName : null
 
   const links = [
+    { to: '/#about', label: t.nav.about },
     { to: '/#services', label: t.nav.services },
     { to: '/#masters', label: t.nav.masters },
-    { to: '/#about', label: t.nav.about },
     { to: '/booking', label: t.nav.book },
     { to: '/cabinet', label: t.nav.cabinet },
   ]
+
+  const onHashNav = (e: MouseEvent<HTMLAnchorElement>, to: string) => {
+    setOpen(false)
+    const hashIndex = to.indexOf('#')
+    if (hashIndex === -1) return
+
+    const path = to.slice(0, hashIndex) || '/'
+    const hash = to.slice(hashIndex)
+
+    if (location.pathname === path) {
+      e.preventDefault()
+      window.history.pushState(null, '', hash)
+      scrollToHash(hash)
+      return
+    }
+
+    // Navigate home with hash; HashScroll will finish after mount
+    e.preventDefault()
+    navigate(to)
+  }
+
+  const onRouteNav = (to: string) => {
+    setOpen(false)
+    if (location.pathname === to) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+    }
+  }
 
   const unread = notifications.filter((n) => !n.readAt).length
 
@@ -104,11 +133,22 @@ export function Navigation() {
         </Link>
 
         <nav className="nav__links">
-          {links.map((l) => (
-            <NavLink key={l.to} to={l.to} className="nav__link" onClick={() => setOpen(false)}>
-              {l.label}
-            </NavLink>
-          ))}
+          {links.map((l) =>
+            l.to.includes('#') ? (
+              <a
+                key={l.to}
+                href={l.to}
+                className="nav__link"
+                onClick={(e) => onHashNav(e, l.to)}
+              >
+                {l.label}
+              </a>
+            ) : (
+              <NavLink key={l.to} to={l.to} className="nav__link" onClick={() => onRouteNav(l.to)}>
+                {l.label}
+              </NavLink>
+            ),
+          )}
         </nav>
 
         <div className="nav__actions">
@@ -182,9 +222,19 @@ export function Navigation() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.05 * i }}
               >
-                <Link to={l.to} className="nav__mobile-link" onClick={() => setOpen(false)}>
-                  {l.label}
-                </Link>
+                {l.to.includes('#') ? (
+                  <a
+                    href={l.to}
+                    className="nav__mobile-link"
+                    onClick={(e) => onHashNav(e, l.to)}
+                  >
+                    {l.label}
+                  </a>
+                ) : (
+                  <Link to={l.to} className="nav__mobile-link" onClick={() => onRouteNav(l.to)}>
+                    {l.label}
+                  </Link>
+                )}
               </motion.div>
             ))}
             {isClient && (

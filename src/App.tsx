@@ -6,12 +6,18 @@ import { AuthProvider } from './auth/AuthContext'
 import { RequireAuth } from './auth/RequireAuth'
 import { ToastProvider } from './components/ui/Toast'
 import { Navigation } from './components/Navigation'
+import { HashScroll } from './components/HashScroll'
+import { ScrollToTop } from './components/ScrollToTop'
 import { LandingPage } from './pages/LandingPage'
 import { BookingPage } from './pages/BookingPage'
 import { CabinetPage } from './pages/CabinetPage'
 import { StaffPage } from './pages/StaffPage'
 import { AdminPage } from './pages/AdminPage'
 import { LoginPage } from './pages/LoginPage'
+import { DatenschutzPage } from './pages/DatenschutzPage'
+import { ImpressumPage } from './pages/ImpressumPage'
+import { CookieConsent } from './components/CookieConsent'
+import { PromoGift } from './components/PromoGift'
 import { CursorGlow } from './components/CursorGlow'
 import { AmbientBackdrop } from './components/AmbientBackdrop'
 import './styles/global.css'
@@ -24,6 +30,8 @@ function AnimatedRoutes() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/booking" element={<BookingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/datenschutz" element={<DatenschutzPage />} />
+        <Route path="/impressum" element={<ImpressumPage />} />
         <Route
           path="/cabinet"
           element={
@@ -63,7 +71,11 @@ export default function App() {
               <AmbientBackdrop />
               <CursorGlow />
               <Navigation />
+              <ScrollToTop />
+              <HashScroll />
               <AnimatedRoutes />
+              <CookieConsent />
+              <PromoGift />
             </BrowserRouter>
           </ToastProvider>
         </AuthProvider>

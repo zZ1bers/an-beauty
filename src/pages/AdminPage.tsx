@@ -11,15 +11,75 @@ import {
   BarChart3,
   LogOut,
   Plus,
+  UserRound,
+  Scissors,
+  Wallet,
+  Clock3,
 } from 'lucide-react'
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  Area,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  LabelList,
+} from 'recharts'
 import { useNavigate } from 'react-router-dom'
 import { useLang } from '../i18n/LanguageContext'
+import { useTheme } from '../theme/ThemeContext'
 import { useAuth } from '../auth/AuthContext'
 import { api, ApiError } from '../lib/api'
 import { Modal, confirmAction } from '../components/ui/Modal'
 import { useToast } from '../components/ui/Toast'
 import { ImageUpload } from '../components/ui/ImageUpload'
 import './Portal.css'
+
+const CHART_BASE = {
+  coral: '#E7717D',
+  coralDeep: '#d45a67',
+  green: '#8FC24A',
+  greenDeep: '#7AAD3A',
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  pending: '#E0B07A',
+  confirmed: '#A8A29A',
+  completed: '#8FC24A',
+  cancelled: '#E7717D',
+  no_show: '#6B8FB8',
+}
+
+function chartTheme(mode: 'light' | 'dark') {
+  if (mode === 'light') {
+    return {
+      ...CHART_BASE,
+      label: '#3a2f28',
+      tick: 'rgba(58, 47, 40, 0.72)',
+      grid: 'rgba(58, 47, 40, 0.12)',
+      tooltipBg: 'rgba(255, 255, 255, 0.98)',
+      tooltipBorder: 'rgba(231, 113, 125, 0.4)',
+      tooltipText: '#3a2f28',
+    }
+  }
+  return {
+    ...CHART_BASE,
+    label: '#F4EFE9',
+    tick: 'rgba(244, 239, 233, 0.78)',
+    grid: 'rgba(244, 239, 233, 0.14)',
+    tooltipBg: 'rgba(34, 27, 23, 0.96)',
+    tooltipBorder: 'rgba(231, 113, 125, 0.45)',
+    tooltipText: '#F4EFE9',
+  }
+}
 
 const tabs = [
   { id: 'stats', icon: BarChart3 },
@@ -67,6 +127,7 @@ type ServiceRow = {
   duration: number
   featured: boolean
   isActive: boolean
+  masterIds?: string[]
   nameRu?: string
   nameDe?: string
   descriptionRu?: string
@@ -87,12 +148,15 @@ type CategoryRow = {
 type BookingRow = {
   id: string
   client: string
+  clientId?: string
   date: string
   time: string
+  startsAt?: string
   status: string
   notes: string | null
-  service: { name: { ru: string; de: string } }
-  master: { name: string }
+  price: number
+  service: { id: string; categoryId?: string; name: { ru: string; de: string } }
+  master: { id: string; name: string }
 }
 
 type ClientRow = {
@@ -105,6 +169,7 @@ type ClientRow = {
   totalVisits: number
   totalSpent: number
   bookingsCount: number
+  createdAt?: string
 }
 
 type ClientDetail = {
@@ -165,6 +230,7 @@ const emptyService = {
   durationMin: 60,
   imageUrl: '',
   featured: false,
+  masterIds: [] as string[],
 }
 
 const emptyCategory = {
@@ -186,10 +252,29 @@ const emptyPromo = {
 
 export function AdminPage() {
   const { t, locale } = useLang()
+  const { theme } = useTheme()
   const { logout } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
 
+  const CHART = useMemo(() => chartTheme(theme), [theme])
+  const tickProps = useMemo(
+    () => ({ fill: CHART.tick, fontSize: 12, fontWeight: 500 as const }),
+    [CHART.tick],
+  )
+  const tipStyle = useMemo(
+    () => ({
+      background: CHART.tooltipBg,
+      border: `1px solid ${CHART.tooltipBorder}`,
+      borderRadius: 12,
+      color: CHART.tooltipText,
+      boxShadow:
+        theme === 'light'
+          ? '0 12px 32px rgba(58, 47, 40, 0.12)'
+          : '0 12px 32px rgba(0,0,0,0.35)',
+    }),
+    [CHART, theme],
+  )
   const [tab, setTab] = useState<TabId>('stats')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -203,6 +288,8 @@ export function AdminPage() {
   const [promos, setPromos] = useState<PromoRow[]>([])
 
   const [statusFilter, setStatusFilter] = useState('')
+  const [masterFilter, setMasterFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
   const [clientSearch, setClientSearch] = useState('')
 
   const [masterModal, setMasterModal] = useState<'create' | 'edit' | null>(null)
@@ -247,6 +334,7 @@ export function AdminPage() {
           description: row.description ?? { ru: row.descriptionRu ?? '', de: row.descriptionDe ?? '' },
           image: row.image ?? row.imageUrl ?? '',
           duration: row.duration ?? row.durationMin ?? 60,
+          masterIds: row.masterIds ?? [],
         })),
       )
       setCategories(c)
@@ -274,10 +362,118 @@ export function AdminPage() {
     promos: t.admin.promos,
   }
 
+  const serviceCategoryById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const s of services) map.set(s.id, s.categoryId)
+    return map
+  }, [services])
+
   const filteredBookings = useMemo(() => {
-    if (!statusFilter) return bookings
-    return bookings.filter((b) => b.status === statusFilter)
-  }, [bookings, statusFilter])
+    return bookings.filter((b) => {
+      if (statusFilter && b.status !== statusFilter) return false
+      if (masterFilter && b.master.id !== masterFilter) return false
+      if (categoryFilter) {
+        const catId = b.service.categoryId ?? serviceCategoryById.get(b.service.id)
+        if (catId !== categoryFilter) return false
+      }
+      return true
+    })
+  }, [bookings, statusFilter, masterFilter, categoryFilter, serviceCategoryById])
+
+  const chartSeries = useMemo(() => {
+    const days = 14
+    const dayKeys: string[] = []
+    const byDay = new Map<string, { date: string; revenue: number; bookings: number; clients: number }>()
+    const today = new Date()
+    today.setHours(12, 0, 0, 0)
+
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(today)
+      d.setDate(today.getDate() - i)
+      const key = d.toISOString().slice(0, 10)
+      dayKeys.push(key)
+      byDay.set(key, {
+        date: key.slice(5).replace('-', '/'),
+        revenue: 0,
+        bookings: 0,
+        clients: 0,
+      })
+    }
+
+    for (const b of bookings) {
+      const key = (b.startsAt ?? b.date).slice(0, 10)
+      const row = byDay.get(key)
+      if (!row) continue
+      row.bookings += 1
+      if (b.status === 'completed' || b.status === 'confirmed') {
+        row.revenue += Number(b.price) || 0
+      }
+    }
+
+    for (const c of clients) {
+      if (!c.createdAt) continue
+      const key = new Date(c.createdAt).toISOString().slice(0, 10)
+      const row = byDay.get(key)
+      if (row) row.clients += 1
+    }
+
+    return dayKeys.map((k) => byDay.get(k)!)
+  }, [bookings, clients])
+
+  const statusChart = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const b of bookings) {
+      counts.set(b.status, (counts.get(b.status) ?? 0) + 1)
+    }
+    return [...counts.entries()].map(([name, value]) => ({
+      name,
+      value,
+      fill: STATUS_COLORS[name] ?? CHART_BASE.coral,
+    }))
+  }, [bookings])
+
+  const masterChart = useMemo(() => {
+    const map = new Map<string, { name: string; bookings: number; revenue: number }>()
+    for (const b of bookings) {
+      if (b.status === 'cancelled') continue
+      const cur = map.get(b.master.id) ?? { name: b.master.name.split(' ')[0] || b.master.name, bookings: 0, revenue: 0 }
+      cur.bookings += 1
+      if (b.status === 'completed') cur.revenue += Number(b.price) || 0
+      map.set(b.master.id, cur)
+    }
+    return [...map.values()].sort((a, b) => b.bookings - a.bookings).slice(0, 6)
+  }, [bookings])
+
+  const topClientsChart = useMemo(() => {
+    return [...clients]
+      .sort((a, b) => b.totalSpent - a.totalSpent)
+      .slice(0, 5)
+      .map((c) => {
+        const parts = c.name.trim().split(/\s+/)
+        const short =
+          parts.length >= 2 ? `${parts[0]} ${parts[1][0]}.` : parts[0] || c.name
+        return {
+          name: short,
+          spent: Math.round(c.totalSpent),
+          label: `€${Math.round(c.totalSpent)}`,
+        }
+      })
+  }, [clients])
+
+  const upcomingList = useMemo(() => {
+    const now = Date.now()
+    return bookings
+      .filter((b) => {
+        if (b.status !== 'pending' && b.status !== 'confirmed') return false
+        const at = new Date(b.startsAt ?? `${b.date}T${b.time}:00`).getTime()
+        return Number.isFinite(at) && at >= now
+      })
+      .sort((a, b) => {
+        const ta = new Date(a.startsAt ?? `${a.date}T${a.time}:00`).getTime()
+        const tb = new Date(b.startsAt ?? `${b.date}T${b.time}:00`).getTime()
+        return ta - tb
+      })
+  }, [bookings])
 
   const filteredClients = useMemo(() => {
     const q = clientSearch.trim().toLowerCase()
@@ -360,6 +556,7 @@ export function AdminPage() {
       durationMin: s.duration,
       imageUrl: s.image,
       featured: s.featured,
+      masterIds: s.masterIds ?? [],
     })
     setServiceModal('edit')
   }
@@ -500,6 +697,15 @@ export function AdminPage() {
     }))
   }
 
+  const toggleServiceMaster = (id: string) => {
+    setServiceForm((prev) => ({
+      ...prev,
+      masterIds: prev.masterIds.includes(id)
+        ? prev.masterIds.filter((x) => x !== id)
+        : [...prev.masterIds, id],
+    }))
+  }
+
   const togglePromoService = (id: string) => {
     setPromoForm((prev) => ({
       ...prev,
@@ -567,22 +773,272 @@ export function AdminPage() {
         {!loading && !error && (
           <AnimatePanel tab={tab}>
             {tab === 'stats' && stats && (
-              <div className="admin__cats">
-                {(
-                  [
-                    [stats.clients, t.admin.clients],
-                    [stats.masters, t.admin.staff],
-                    [stats.services, t.admin.services],
-                    [stats.bookingsThisMonth, t.admin.bookingsMonth],
-                    [`€${stats.revenueThisMonth}`, t.admin.revenue],
-                    [stats.upcomingBookings, t.admin.upcoming],
-                  ] as const
-                ).map(([value, label]) => (
-                  <div key={label} className="admin__cat glass">
-                    <strong style={{ fontSize: '1.4rem' }}>{value}</strong>
-                    <span style={{ textTransform: 'none', letterSpacing: 0 }}>{label}</span>
+              <div className="admin__stats">
+                <div className="admin__kpis">
+                  {(
+                    [
+                      [stats.clients, t.admin.clients, UserRound, 'coral'],
+                      [stats.masters, t.admin.staff, Scissors, 'green'],
+                      [stats.services, t.admin.services, Sparkles, 'beige'],
+                      [stats.bookingsThisMonth, t.admin.bookingsMonth, CalendarRange, 'coral'],
+                      [`€${stats.revenueThisMonth}`, t.admin.revenue, Wallet, 'green'],
+                      [stats.upcomingBookings, t.admin.upcoming, Clock3, 'beige'],
+                    ] as const
+                  ).map(([value, label, Icon, tone]) => (
+                    <div key={label} className={`admin__kpi admin__kpi--${tone} glass-strong`}>
+                      <div className="admin__kpi-icon" aria-hidden>
+                        <Icon size={18} />
+                      </div>
+                      <div className="admin__kpi-copy">
+                        <span className="admin__kpi-label">{label}</span>
+                        <strong className="admin__kpi-value">{value}</strong>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="admin__charts">
+                  <div className="admin__chart glass-strong">
+                    <h3>{t.admin.chartRevenue}</h3>
+                    <div className="admin__chart-body">
+                      <ResponsiveContainer width="100%" height={260}>
+                        <ComposedChart data={chartSeries} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor={CHART.coral} stopOpacity={0.55} />
+                              <stop offset="100%" stopColor={CHART.coral} stopOpacity={0.02} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} vertical={false} />
+                          <XAxis dataKey="date" tick={tickProps} axisLine={false} tickLine={false} />
+                          <YAxis
+                            yAxisId="€"
+                            tick={tickProps}
+                            width={42}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <YAxis
+                            yAxisId="n"
+                            orientation="right"
+                            tick={tickProps}
+                            width={28}
+                            allowDecimals={false}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <Tooltip contentStyle={tipStyle} labelStyle={{ color: CHART.label }} />
+                          <Legend wrapperStyle={{ color: CHART.label, paddingTop: 8 }} />
+                          <Area
+                            yAxisId="€"
+                            type="monotone"
+                            dataKey="revenue"
+                            name="€"
+                            stroke={CHART.coral}
+                            fill="url(#revFill)"
+                            strokeWidth={2.5}
+                          />
+                          <Line
+                            yAxisId="n"
+                            type="monotone"
+                            dataKey="bookings"
+                            name={t.admin.bookings}
+                            stroke={CHART.green}
+                            strokeWidth={2.5}
+                            dot={{ r: 3, fill: CHART.green, strokeWidth: 0 }}
+                            activeDot={{ r: 5 }}
+                          />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
-                ))}
+
+                  <div className="admin__chart glass-strong">
+                    <h3>{t.admin.chartByStatus}</h3>
+                    <div className="admin__chart-body">
+                      {statusChart.length === 0 ? (
+                        <p className="portal__empty">{t.admin.empty}</p>
+                      ) : (
+                        <ResponsiveContainer width="100%" height={260}>
+                          <PieChart>
+                            <Pie
+                              data={statusChart}
+                              dataKey="value"
+                              nameKey="name"
+                              innerRadius={52}
+                              outerRadius={88}
+                              paddingAngle={4}
+                              stroke="rgba(26,21,18,0.35)"
+                              strokeWidth={2}
+                            >
+                              {statusChart.map((entry) => (
+                                <Cell key={entry.name} fill={entry.fill} />
+                              ))}
+                              <LabelList
+                                dataKey="value"
+                                position="outside"
+                                fill={CHART.label}
+                                fontSize={12}
+                                fontWeight={600}
+                              />
+                            </Pie>
+                            <Tooltip contentStyle={tipStyle} />
+                            <Legend
+                              wrapperStyle={{ color: CHART.label }}
+                              formatter={(value) => (
+                                <span style={{ color: CHART.label, fontSize: 12 }}>{value}</span>
+                              )}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="admin__chart glass-strong">
+                    <h3>{t.admin.chartByMaster}</h3>
+                    <div className="admin__chart-body">
+                      {masterChart.length === 0 ? (
+                        <p className="portal__empty">{t.admin.empty}</p>
+                      ) : (
+                        <ResponsiveContainer width="100%" height={260}>
+                          <BarChart data={masterChart} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} vertical={false} />
+                            <XAxis dataKey="name" tick={tickProps} axisLine={false} tickLine={false} />
+                            <YAxis tick={tickProps} width={36} axisLine={false} tickLine={false} />
+                            <Tooltip contentStyle={tipStyle} cursor={false} />
+                            <Legend
+                              wrapperStyle={{ color: CHART.label }}
+                              formatter={(value) => (
+                                <span style={{ color: CHART.label, fontSize: 12 }}>{value}</span>
+                              )}
+                            />
+                            <Bar
+                              dataKey="bookings"
+                              name={t.admin.bookings}
+                              fill={CHART.coral}
+                              radius={[8, 8, 0, 0]}
+                              maxBarSize={36}
+                              activeBar={false}
+                            >
+                              <LabelList
+                                dataKey="bookings"
+                                position="top"
+                                fill={CHART.label}
+                                fontSize={11}
+                                fontWeight={600}
+                              />
+                            </Bar>
+                            <Bar
+                              dataKey="revenue"
+                              name="€"
+                              fill={CHART.greenDeep}
+                              radius={[8, 8, 0, 0]}
+                              maxBarSize={36}
+                              activeBar={false}
+                            >
+                              <LabelList
+                                dataKey="revenue"
+                                position="top"
+                                fill={CHART.label}
+                                fontSize={11}
+                                fontWeight={600}
+                              />
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="admin__chart glass-strong">
+                    <h3>{t.admin.chartClients}</h3>
+                    <div className="admin__chart-body">
+                      {topClientsChart.length === 0 ? (
+                        <p className="portal__empty">{t.admin.empty}</p>
+                      ) : (
+                        <ResponsiveContainer width="100%" height={260}>
+                          <BarChart
+                            data={topClientsChart}
+                            layout="vertical"
+                            margin={{ top: 4, right: 48, left: 4, bottom: 4 }}
+                          >
+                            <defs>
+                              <linearGradient id="clientBar" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor={CHART.coralDeep} />
+                                <stop offset="100%" stopColor={CHART.coral} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} horizontal={false} />
+                            <XAxis
+                              type="number"
+                              tick={tickProps}
+                              axisLine={false}
+                              tickLine={false}
+                              tickFormatter={(v) => `€${v}`}
+                            />
+                            <YAxis
+                              type="category"
+                              dataKey="name"
+                              width={78}
+                              tick={tickProps}
+                              axisLine={false}
+                              tickLine={false}
+                            />
+                            <Tooltip
+                              contentStyle={tipStyle}
+                              cursor={false}
+                              formatter={(value) => [`€${value}`, '€']}
+                            />
+                            <Bar
+                              dataKey="spent"
+                              name="€"
+                              fill="url(#clientBar)"
+                              radius={[0, 10, 10, 0]}
+                              barSize={22}
+                              activeBar={false}
+                            >
+                              <LabelList
+                                dataKey="label"
+                                position="right"
+                                fill={CHART.label}
+                                fontSize={12}
+                                fontWeight={700}
+                              />
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <section className="admin__upcoming">
+                  <div className="admin__upcoming-head">
+                    <h3>{t.admin.upcomingList}</h3>
+                    <span className="admin__upcoming-count">{upcomingList.length}</span>
+                  </div>
+                  <div className="admin__table glass-strong">
+                    {upcomingList.length === 0 && (
+                      <p className="portal__empty">{t.admin.upcomingEmpty}</p>
+                    )}
+                    {upcomingList.map((b) => (
+                      <div key={b.id} className="admin__row admin__upcoming-row">
+                        <div className="admin__booking-avatar">{b.client.slice(0, 1)}</div>
+                        <div>
+                          <strong>{b.client}</strong>
+                          <span>
+                            {b.service.name[locale]} · {b.master.name}
+                          </span>
+                        </div>
+                        <em>
+                          {b.date} · {b.time}
+                        </em>
+                        <span className={`admin__badge admin__badge--${b.status}`}>{b.status}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
               </div>
             )}
 
@@ -680,15 +1136,89 @@ export function AdminPage() {
 
             {tab === 'bookings' && (
               <>
-                <div className="admin__filters">
-                  <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                    <option value="">{t.admin.allStatuses}</option>
-                    {['pending', 'confirmed', 'completed', 'cancelled', 'no_show'].map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
+                <div className="admin__booking-filters glass-strong">
+                  <div className="admin__filter-row">
+                    <span className="admin__filter-label">{t.admin.filterStatus}</span>
+                    <div className="admin__filter-chips" role="group" aria-label={t.admin.filterStatus}>
+                      <button
+                        type="button"
+                        className={`admin__chip ${!statusFilter ? 'is-active' : ''}`}
+                        onClick={() => setStatusFilter('')}
+                      >
+                        {t.admin.allStatuses}
+                      </button>
+                      {(
+                        [
+                          ['pending', t.admin.statusPending],
+                          ['confirmed', t.admin.statusConfirmed],
+                          ['completed', t.admin.statusCompleted],
+                          ['cancelled', t.admin.statusCancelled],
+                          ['no_show', t.admin.statusNoShow],
+                        ] as const
+                      ).map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          className={`admin__chip admin__chip--${value} ${statusFilter === value ? 'is-active' : ''}`}
+                          onClick={() => setStatusFilter(value)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="admin__filter-row">
+                    <span className="admin__filter-label">{t.admin.filterMaster}</span>
+                    <div className="admin__filter-chips" role="group" aria-label={t.admin.filterMaster}>
+                      <button
+                        type="button"
+                        className={`admin__chip ${!masterFilter ? 'is-active' : ''}`}
+                        onClick={() => setMasterFilter('')}
+                      >
+                        {t.admin.allMasters}
+                      </button>
+                      {masters
+                        .filter((m) => m.isActive)
+                        .map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            className={`admin__chip admin__chip--master ${masterFilter === m.id ? 'is-active' : ''}`}
+                            onClick={() => setMasterFilter(m.id)}
+                          >
+                            <img src={m.image} alt="" className="admin__chip-avatar" />
+                            {m.name.split(' ')[0]}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+
+                  <div className="admin__filter-row">
+                    <span className="admin__filter-label">{t.admin.filterCategory}</span>
+                    <div className="admin__filter-chips" role="group" aria-label={t.admin.filterCategory}>
+                      <button
+                        type="button"
+                        className={`admin__chip ${!categoryFilter ? 'is-active' : ''}`}
+                        onClick={() => setCategoryFilter('')}
+                      >
+                        {t.admin.allCategories}
+                      </button>
+                      {categories
+                        .filter((c) => c.isActive)
+                        .map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            className={`admin__chip ${categoryFilter === c.id ? 'is-active' : ''}`}
+                            onClick={() => setCategoryFilter(c.id)}
+                          >
+                            {c.icon ? <span className="admin__chip-icon">{c.icon}</span> : null}
+                            {locale === 'de' ? c.nameDe : c.nameRu}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
                 </div>
                 <div className="admin__table glass-strong">
                   {filteredBookings.length === 0 && <p className="portal__empty">{t.admin.empty}</p>}
@@ -699,6 +1229,7 @@ export function AdminPage() {
                         <strong>{b.client}</strong>
                         <span>
                           {b.service.name[locale]} · {b.master.name}
+                          {b.price != null ? ` · €${b.price}` : ''}
                         </span>
                       </div>
                       <em>
@@ -1014,6 +1545,21 @@ export function AdminPage() {
               </em>
             </span>
           </label>
+          <div>
+            <p className="eyebrow">{t.admin.mastersForService}</p>
+            <div className="admin__checkboxes">
+              {masters.map((m) => (
+                <label key={m.id} className="admin__check">
+                  <input
+                    type="checkbox"
+                    checked={serviceForm.masterIds.includes(m.id)}
+                    onChange={() => toggleServiceMaster(m.id)}
+                  />
+                  {m.name}
+                </label>
+              ))}
+            </div>
+          </div>
           <div className="admin__form-actions">
             <button type="button" className="btn btn-ghost" onClick={() => setServiceModal(null)}>
               Cancel

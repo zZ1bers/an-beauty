@@ -35,6 +35,31 @@ export async function masterRoutes(app: FastifyInstance) {
     }
   })
 
+  app.put('/master/services', masterOnly, async (request, reply) => {
+    const masterId = await getMasterProfileId(request.user.id)
+    if (!masterId) return reply.status(404).send({ error: 'Master profile not found' })
+
+    const body = z.object({ specialtyIds: z.array(z.string()) }).safeParse(request.body)
+    if (!body.success) return reply.status(400).send({ error: 'Invalid body' })
+
+    const valid = await prisma.service.findMany({
+      where: { id: { in: body.data.specialtyIds }, isActive: true },
+      select: { id: true },
+    })
+    const ids = valid.map((s) => s.id)
+
+    await prisma.$transaction(async (tx) => {
+      await tx.masterService.deleteMany({ where: { masterId } })
+      if (ids.length) {
+        await tx.masterService.createMany({
+          data: ids.map((serviceId) => ({ masterId, serviceId })),
+        })
+      }
+    })
+
+    return { specialties: ids }
+  })
+
   app.get('/master/bookings', masterOnly, async (request, reply) => {
     const masterId = await getMasterProfileId(request.user.id)
     if (!masterId) return reply.status(404).send({ error: 'Master profile not found' })

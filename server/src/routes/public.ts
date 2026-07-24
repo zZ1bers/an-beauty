@@ -5,6 +5,7 @@ import { BookingStatus, Role } from '@prisma/client'
 import { z } from 'zod'
 import { prisma } from '../db.js'
 import { getAvailableSlots, resolveBookableSlot } from '../services/booking.js'
+import { resolvePromoPrice } from '../services/promo.js'
 
 function mapService(s: {
   id: string
@@ -232,6 +233,8 @@ export async function publicRoutes(app: FastifyInstance) {
     const profile = user.clientProfile
     if (!profile) return reply.status(500).send({ error: 'Profile missing' })
 
+    const priced = await resolvePromoPrice(service.id, service.price)
+
     const booking = await prisma.booking.create({
       data: {
         clientId: profile.id,
@@ -240,7 +243,7 @@ export async function publicRoutes(app: FastifyInstance) {
         startsAt,
         endsAt,
         status: BookingStatus.CONFIRMED,
-        priceSnapshot: service.price,
+        priceSnapshot: priced.price,
         notes: body.data.notes?.trim() || null,
         createdBy: user.id,
       },

@@ -234,7 +234,7 @@ export function CabinetPage() {
 
   return (
     <main className="cabinet page-enter page-shell">
-      <div className="page-shell__main">
+      <div className="page-shell__main page-shell__main--top">
       <div className="cabinet__wrap">
         {loading && <p className="portal__loading">{t.admin.loading}</p>}
         {error && <p className="portal__error">{error}</p>}
