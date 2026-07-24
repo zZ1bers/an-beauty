@@ -115,3 +115,19 @@
     display: block;
   }
 }
+
+@media (max-width: 799px) {
+  .ritual {
+    padding: 4.5rem var(--layout-pad);
+  }
+
+  .ritual__head {
+    margin-bottom: 2rem;
+    max-width: none;
+  }
+
+  .ritual__step {
+    gap: 1rem;
+    padding: 1.35rem 0;
+  }
+}

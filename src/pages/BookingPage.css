@@ -553,3 +553,71 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+@media (max-width: 799px) {
+  .booking {
+    padding-top: calc(var(--nav-h) + 2.75rem);
+  }
+
+  .booking__wrap {
+    padding: 0 var(--layout-pad) 3.25rem;
+  }
+
+  .booking__head {
+    margin-bottom: 1.35rem;
+  }
+
+  .booking__title {
+    margin-bottom: 1.25rem;
+  }
+
+  .booking__panel {
+    padding: 1rem;
+    min-height: 0;
+    border-radius: var(--radius-lg);
+  }
+
+  .booking__service {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+
+  .booking__service img {
+    width: 72px;
+    height: 64px;
+  }
+
+  .booking__grid {
+    max-height: min(58vh, 520px);
+  }
+
+  .booking__steps {
+    margin: 0 -0.15rem;
+    padding-inline: 0.15rem;
+    scrollbar-width: none;
+  }
+
+  .booking__steps::-webkit-scrollbar {
+    display: none;
+  }
+
+  .booking__detail-actions {
+    flex-direction: column;
+  }
+
+  .booking__detail-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 419px) {
+  .booking__service {
+    grid-template-columns: 1fr;
+  }
+
+  .booking__service img {
+    width: 100%;
+    height: 140px;
+  }
+}

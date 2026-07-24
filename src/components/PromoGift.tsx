@@ -28,7 +28,10 @@ export function PromoGift() {
   const [modalOpen, setModalOpen] = useState(false)
 
   useEffect(() => {
-    const update = () => setRestTop(Math.max(80, window.innerHeight - 88))
+    const update = () => {
+      const gap = window.innerWidth < 900 ? 120 : 88
+      setRestTop(Math.max(80, window.innerHeight - gap))
+    }
     update()
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)

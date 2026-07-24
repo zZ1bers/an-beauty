@@ -154,6 +154,28 @@
 	margin-top: 8.5rem;
 }
 
+@media (max-width: 899px) {
+	.services {
+		padding: 4.5rem var(--layout-pad) 2.75rem;
+	}
+
+	.services__head {
+		margin-bottom: 2.25rem;
+	}
+
+	.services__info {
+		padding: 1.1rem 1.15rem 1.25rem;
+	}
+
+	.services__info h3 {
+		font-size: clamp(1.45rem, 5.5vw, 1.75rem);
+	}
+
+	.services__all {
+		margin-top: 2.75rem;
+	}
+}
+
 /* Editorial mosaic: staggered, close, readable — no chaotic stacking */
 @media (min-width: 900px) {
 	.services {

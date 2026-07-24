@@ -115,3 +115,37 @@
     justify-content: space-between;
   }
 }
+
+@media (max-width: 799px) {
+  .footer {
+    padding: 0 var(--layout-pad) calc(2rem + env(safe-area-inset-bottom, 0px));
+    text-align: center;
+  }
+
+  .footer__top {
+    align-items: center;
+  }
+
+  .footer__brand {
+    font-size: clamp(2rem, 9vw, 2.5rem);
+  }
+
+  .footer__links {
+    justify-content: center;
+    gap: 0.85rem 1.15rem;
+  }
+
+  .footer__lang {
+    justify-content: center;
+  }
+
+  .footer__lang > span {
+    display: none;
+  }
+
+  .footer__legal {
+    justify-content: center;
+    gap: 0.65rem 1rem;
+    font-size: 0.7rem;
+  }
+}

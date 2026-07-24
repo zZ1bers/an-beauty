@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { LanguageProvider } from './i18n/LanguageContext'
 import { ThemeProvider } from './theme/ThemeContext'
@@ -20,6 +20,7 @@ import { CookieConsent } from './components/CookieConsent'
 import { PromoGift } from './components/PromoGift'
 import { CursorGlow } from './components/CursorGlow'
 import { AmbientBackdrop } from './components/AmbientBackdrop'
+import { PORTAL_ADMIN, PORTAL_STAFF } from './lib/portalRoutes'
 import './styles/global.css'
 
 function AnimatedRoutes() {
@@ -41,7 +42,7 @@ function AnimatedRoutes() {
           }
         />
         <Route
-          path="/staff"
+          path={PORTAL_STAFF}
           element={
             <RequireAuth roles={['MASTER']}>
               <StaffPage />
@@ -49,13 +50,16 @@ function AnimatedRoutes() {
           }
         />
         <Route
-          path="/admin"
+          path={PORTAL_ADMIN}
           element={
             <RequireAuth roles={['ADMIN']}>
               <AdminPage />
             </RequireAuth>
           }
         />
+        {/* Old obvious paths — hide without revealing new URLs */}
+        <Route path="/admin" element={<Navigate to="/" replace />} />
+        <Route path="/staff" element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>
   )

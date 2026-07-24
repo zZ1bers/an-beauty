@@ -88,3 +88,24 @@
   padding: 0.65rem 1.05rem;
   font-size: 0.78rem;
 }
+
+@media (max-width: 899px) {
+  .cookie-bar {
+    left: max(0.75rem, env(safe-area-inset-left));
+    right: max(0.75rem, env(safe-area-inset-right));
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    width: auto;
+    max-height: min(72vh, 520px);
+    padding: 1rem 1rem 1.05rem;
+  }
+
+  .cookie-bar__actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .cookie-bar__btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

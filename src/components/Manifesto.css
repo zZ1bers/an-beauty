@@ -133,3 +133,45 @@
     bottom: -10%;
   }
 }
+
+@media (max-width: 899px) {
+  .manifesto {
+    padding: 5rem var(--layout-pad) 2.5rem;
+    overflow-x: clip;
+  }
+
+  .manifesto > .neon-heart {
+    z-index: 0;
+  }
+
+  .manifesto__title {
+    max-width: 11ch;
+  }
+
+  .manifesto__body {
+    width: 100%;
+    max-width: 100%;
+    font-size: clamp(1.05rem, 4.2vw, 1.35rem);
+  }
+
+  .manifesto__visual {
+    width: min(92%, 360px);
+    margin: 0.5rem auto 0;
+  }
+
+  .manifesto__accent--tl {
+    width: 30%;
+    left: -6%;
+    top: -6%;
+  }
+
+  .manifesto__accent--br {
+    width: 30%;
+    right: -6%;
+    bottom: -6%;
+  }
+
+  .manifesto__marquee {
+    margin-top: 3.5rem;
+  }
+}

@@ -6,6 +6,7 @@ import { useLang } from '../i18n/LanguageContext'
 import { useTheme } from '../theme/ThemeContext'
 import { useAuth, homeForRole } from '../auth/AuthContext'
 import { api, ApiError } from '../lib/api'
+import { isPortalPath } from '../lib/portalRoutes'
 import { Drawer } from './ui/Drawer'
 import { useToast } from './ui/Toast'
 import { scrollToHash } from './HashScroll'
@@ -30,9 +31,7 @@ export function Navigation() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const location = useLocation()
   const isPortal =
-    location.pathname.startsWith('/staff') ||
-    location.pathname.startsWith('/admin') ||
-    location.pathname.startsWith('/login')
+    isPortalPath(location.pathname) || location.pathname.startsWith('/login')
 
   const isClient = user?.role === 'CLIENT'
   const clientName = isClient && user ? user.firstName : null
@@ -96,6 +95,19 @@ export function Navigation() {
     const id = window.setInterval(() => void loadNotifications(), 60_000)
     return () => window.clearInterval(id)
   }, [isClient, loadNotifications])
+
+  useEffect(() => {
+    if (!open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [open])
+
+  useEffect(() => {
+    setOpen(false)
+  }, [location.pathname])
 
   const markRead = async (id: string) => {
     try {
@@ -186,7 +198,7 @@ export function Navigation() {
                 </button>
               ) : (
                 <button
-                  className="nav__lang"
+                  className="nav__lang nav__logout"
                   onClick={() => logout()}
                   aria-label={t.admin.logout}
                   title={t.admin.logout}
@@ -200,7 +212,13 @@ export function Navigation() {
               {locale === 'ru' ? 'Войти' : 'Login'}
             </Link>
           )}
-          <button className="nav__burger" onClick={() => setOpen((v) => !v)} aria-label="Menu">
+          <button
+            className="nav__burger"
+            onClick={() => setOpen((v) => !v)}
+            aria-label="Menu"
+            aria-expanded={open}
+            aria-controls="nav-mobile-panel"
+          >
             {open ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
@@ -208,50 +226,141 @@ export function Navigation() {
 
       <AnimatePresence>
         {open && (
-          <motion.div
-            className="nav__mobile glass-strong"
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-          >
-            {links.map((l, i) => (
-              <motion.div
-                key={l.to}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.05 * i }}
-              >
-                {l.to.includes('#') ? (
-                  <a
-                    href={l.to}
-                    className="nav__mobile-link"
-                    onClick={(e) => onHashNav(e, l.to)}
+          <>
+            <motion.button
+              type="button"
+              className="nav__mobile-backdrop"
+              aria-label="Close menu"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.28 }}
+              onClick={() => setOpen(false)}
+            />
+            <motion.aside
+              id="nav-mobile-panel"
+              className="nav__mobile"
+              role="dialog"
+              aria-modal="true"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <div className="nav__mobile-glow" aria-hidden />
+
+              <div className="nav__mobile-top">
+                <Link to="/" className="nav__brand" onClick={() => setOpen(false)}>
+                  <span className="nav__mark">AN</span>
+                  <span className="nav__dot">.</span>
+                  <span className="nav__name">Beauty</span>
+                </Link>
+                <button
+                  type="button"
+                  className="nav__burger"
+                  onClick={() => setOpen(false)}
+                  aria-label="Close menu"
+                >
+                  <X size={22} />
+                </button>
+              </div>
+
+              <p className="nav__mobile-eyebrow eyebrow">{locale === 'ru' ? 'Навигация' : 'Navigation'}</p>
+
+              <nav className="nav__mobile-nav">
+                {links.map((l, i) => (
+                  <motion.div
+                    key={l.to}
+                    initial={{ opacity: 0, x: 28 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.05 + 0.045 * i, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                   >
-                    {l.label}
-                  </a>
-                ) : (
-                  <Link to={l.to} className="nav__mobile-link" onClick={() => onRouteNav(l.to)}>
-                    {l.label}
-                  </Link>
+                    {l.to.includes('#') ? (
+                      <a
+                        href={l.to}
+                        className="nav__mobile-link"
+                        onClick={(e) => onHashNav(e, l.to)}
+                      >
+                        <span className="nav__mobile-index">0{i + 1}</span>
+                        <span className="nav__mobile-label">{l.label}</span>
+                      </a>
+                    ) : (
+                      <Link to={l.to} className="nav__mobile-link" onClick={() => onRouteNav(l.to)}>
+                        <span className="nav__mobile-index">0{i + 1}</span>
+                        <span className="nav__mobile-label">{l.label}</span>
+                      </Link>
+                    )}
+                  </motion.div>
+                ))}
+              </nav>
+
+              <div className="nav__mobile-foot">
+                {isClient && (
+                  <button
+                    type="button"
+                    className="nav__mobile-notify"
+                    onClick={() => {
+                      setOpen(false)
+                      setDrawerOpen(true)
+                    }}
+                  >
+                    <Bell size={18} />
+                    {t.client.notifications}
+                    {unread > 0 && <span className="nav__mobile-notify-count">{unread}</span>}
+                  </button>
                 )}
-              </motion.div>
-            ))}
-            {isClient && (
-              <button
-                type="button"
-                className="nav__mobile-notify"
-                onClick={() => {
-                  setOpen(false)
-                  setDrawerOpen(true)
-                }}
-              >
-                <Bell size={18} />
-                {t.client.notifications}
-                {unread > 0 && <span className="nav__mobile-notify-count">{unread}</span>}
-              </button>
-            )}
-          </motion.div>
+
+                <div className="nav__mobile-cta">
+                  {user ? (
+                    <>
+                      <Link
+                        to={homeForRole(user.role)}
+                        className="btn btn-primary"
+                        onClick={() => setOpen(false)}
+                      >
+                        {portalLabel}
+                      </Link>
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={() => {
+                          setOpen(false)
+                          logout()
+                          navigate('/')
+                        }}
+                      >
+                        <LogOut size={16} />
+                        {t.admin.logout}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link to="/login" className="btn btn-primary" onClick={() => setOpen(false)}>
+                        {locale === 'ru' ? 'Войти' : 'Login'}
+                      </Link>
+                      <Link
+                        to="/login"
+                        state={{ mode: 'register' }}
+                        className="btn btn-ghost"
+                        onClick={() => setOpen(false)}
+                      >
+                        {locale === 'ru' ? 'Регистрация' : 'Registrieren'}
+                      </Link>
+                    </>
+                  )}
+                </div>
+
+                <div className="nav__mobile-legal">
+                  <Link to="/impressum" onClick={() => setOpen(false)}>
+                    {t.footer.impressum}
+                  </Link>
+                  <Link to="/datenschutz" onClick={() => setOpen(false)}>
+                    {t.footer.datenschutz}
+                  </Link>
+                </div>
+              </div>
+            </motion.aside>
+          </>
         )}
       </AnimatePresence>
 

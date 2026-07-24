@@ -81,6 +81,17 @@
   }
 }
 
+@media (max-width: 899px) {
+  .login {
+    padding: calc(var(--nav-h) + 1.15rem) var(--layout-pad) calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    align-content: start;
+  }
+
+  .login__card {
+    width: 100%;
+  }
+}
+
 .login__error {
   margin: 0;
   color: var(--coral-deep);

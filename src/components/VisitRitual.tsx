@@ -8,9 +8,10 @@ export function VisitRitual() {
 
   return (
     <section className="ritual" id="ritual">
-      <NeonHeart side="left" top="22%" size={22} delay={0.3} opacity={0.58} tilt={-22} depth="edge" />
-      <NeonHeart side="right" top="55%" size={30} delay={0.9} opacity={0.72} tilt={11} depth="mid" />
-      <NeonHeart side="left" top="82%" size={18} delay={1.6} opacity={0.5} tilt={18} depth="near" />
+      <NeonHeart side="left" top="16%" size={18} delay={0.3} opacity={0.52} tilt={-24} depth="edge" />
+      <NeonHeart side="right" top="40%" size={26} delay={0.9} opacity={0.68} tilt={12} depth="mid" />
+      <NeonHeart side="left" top="68%" size={20} delay={1.6} opacity={0.48} tilt={18} depth="near" />
+      <NeonHeart side="right" top="90%" size={16} delay={0.55} opacity={0.55} tilt={-8} depth="edge" />
       <div className="ritual__inner">
         <header className="ritual__head section-heading section-heading--end">
           <span className="lux-line lux-line--vertical" aria-hidden />

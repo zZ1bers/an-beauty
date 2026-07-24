@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import { api, getToken, setToken, type AuthUser, type Role } from '../lib/api'
+import { PORTAL_ADMIN, PORTAL_STAFF } from '../lib/portalRoutes'
 
 type AuthState = {
   user: AuthUser | null
@@ -114,7 +115,7 @@ export function useAuth() {
 }
 
 export function homeForRole(role: Role) {
-  if (role === 'ADMIN') return '/admin'
-  if (role === 'MASTER') return '/staff'
+  if (role === 'ADMIN') return PORTAL_ADMIN
+  if (role === 'MASTER') return PORTAL_STAFF
   return '/cabinet'
 }

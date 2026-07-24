@@ -27,9 +27,10 @@ export function ServicesShowcase() {
 
   return (
     <section className="services" id="services">
-      <NeonHeart side="right" top="18%" size={24} delay={0.4} opacity={0.62} tilt={-12} depth="mid" />
-      <NeonHeart side="left" top="48%" size={20} delay={1.2} opacity={0.55} tilt={20} depth="edge" />
-      <NeonHeart side="right" top="76%" size={28} delay={0.7} opacity={0.7} tilt={-8} depth="near" />
+      <NeonHeart side="right" top="14%" size={18} delay={0.4} opacity={0.55} tilt={-22} depth="edge" />
+      <NeonHeart side="left" top="36%" size={26} delay={1.2} opacity={0.62} tilt={15} depth="mid" />
+      <NeonHeart side="right" top="58%" size={20} delay={0.7} opacity={0.48} tilt={8} depth="near" />
+      <NeonHeart side="left" top="82%" size={22} delay={1.5} opacity={0.58} tilt={-11} depth="edge" />
       <div className="services__inner layout-container">
         <div className="services__head section-heading">
           <span className="lux-line lux-line--vertical" aria-hidden />

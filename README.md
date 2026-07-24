@@ -68,8 +68,7 @@ npm start
 | `/booking` | Запись (нужен логин клиента для confirm) |
 | `/login` | Вход / регистрация клиента |
 | `/cabinet` | CLIENT |
-| `/staff` | MASTER |
-| `/admin` | ADMIN |
+| `PORTAL_STAFF` / `PORTAL_ADMIN` | MASTER / ADMIN — скрытые пути в `src/lib/portalRoutes.ts` |
 
 ## Стек
 

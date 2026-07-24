@@ -86,6 +86,37 @@
   }
 }
 
+@media (max-width: 899px) {
+  .promo-gift-wrap,
+  .promo-gift {
+    width: 64px;
+    height: 64px;
+  }
+
+  .promo-gift__pct {
+    font-size: 0.62rem;
+  }
+
+  .promo-gift-modal__badge {
+    margin-bottom: 0.65rem;
+  }
+
+  .promo-gift-modal__body {
+    font-size: 0.95rem;
+    margin-bottom: 1.1rem;
+  }
+
+  .promo-gift-modal__actions {
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .promo-gift-modal__actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 .promo-gift-modal__badge {
   display: inline-flex;
   margin: 0 0 0.75rem;

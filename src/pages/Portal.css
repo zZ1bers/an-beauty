@@ -822,52 +822,6 @@
   color: var(--coral);
 }
 
-.modal-root {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  display: grid;
-  place-items: center;
-  padding: 1.25rem;
-  background: var(--overlay);
-  backdrop-filter: blur(8px);
-}
-
-.modal-panel {
-  width: min(520px, 100%);
-  max-height: min(88vh, 900px);
-  overflow: auto;
-  border-radius: var(--radius-lg);
-  padding: 1.25rem 1.25rem 1.5rem;
-}
-
-.modal-panel--wide {
-  width: min(720px, 100%);
-}
-
-.modal-panel__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.modal-panel__head h2 {
-  margin: 0;
-  font-size: 1.65rem;
-}
-
-.modal-panel__close {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  border: 1px solid var(--stroke);
-  display: grid;
-  place-items: center;
-  color: var(--text-muted);
-}
-
 .toast-stack {
   position: fixed;
   right: 1rem;
@@ -1130,5 +1084,67 @@
 
   .admin__row span {
     -webkit-line-clamp: 2;
+  }
+}
+
+@media (max-width: 899px) {
+  .portal {
+    padding-top: calc(var(--nav-h) + 2.75rem);
+    padding-bottom: 3rem;
+  }
+
+  .portal__wrap {
+    padding: 0 var(--layout-pad);
+  }
+
+  .portal__head {
+    margin-bottom: 1.75rem;
+    gap: 1rem;
+  }
+
+  .portal__panel {
+    padding: 1.1rem;
+  }
+
+  .admin__row,
+  .admin__row--service {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 0.65rem 0.75rem;
+    padding: 0.85rem 0.9rem;
+  }
+
+  .admin__row img {
+    width: 48px;
+    height: 48px;
+  }
+
+  .admin__row > em,
+  .admin__row > .admin__price,
+  .admin__row > .admin__row-actions,
+  .admin__row > .admin__badge,
+  .admin__row > .admin__status-select {
+    grid-column: 2;
+  }
+
+  .admin__row-actions {
+    justify-self: start;
+  }
+
+  .admin__price {
+    width: 100%;
+    max-width: 140px;
+  }
+
+  .admin__status-select {
+    width: 100%;
+    max-width: 180px;
+  }
+
+  .admin__kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .admin__kpi {
+    padding: 0.95rem 1rem;
   }
 }

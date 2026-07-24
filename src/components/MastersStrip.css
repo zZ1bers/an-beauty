@@ -229,3 +229,22 @@
     gap: 1.5rem;
   }
 }
+
+@media (max-width: 899px) {
+  .masters {
+    padding: 4.5rem var(--layout-pad) 3rem;
+  }
+
+  .masters__head {
+    align-items: stretch;
+    margin-bottom: 2rem;
+  }
+
+  .masters__controls {
+    justify-content: flex-end;
+  }
+
+  .masters__track {
+    touch-action: pan-x;
+  }
+}

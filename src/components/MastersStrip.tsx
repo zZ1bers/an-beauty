@@ -95,9 +95,10 @@ export function MastersStrip() {
 
   return (
     <section className="masters" id="masters">
-      <NeonHeart side="left" top="20%" size={26} delay={0.5} opacity={0.65} tilt={-14} depth="near" />
-      <NeonHeart side="right" top="45%" size={18} delay={1.3} opacity={0.5} tilt={24} depth="edge" />
-      <NeonHeart side="left" top="78%" size={22} delay={0.9} opacity={0.6} tilt={9} depth="mid" />
+      <NeonHeart side="left" top="12%" size={22} delay={0.5} opacity={0.58} tilt={-18} depth="edge" />
+      <NeonHeart side="right" top="38%" size={18} delay={1.3} opacity={0.5} tilt={26} depth="near" />
+      <NeonHeart side="left" top="62%" size={28} delay={0.9} opacity={0.65} tilt={9} depth="mid" />
+      <NeonHeart side="right" top="88%" size={16} delay={0.2} opacity={0.45} tilt={-14} depth="edge" />
       <div className="masters__inner layout-container">
         <header className="masters__head">
           <div className="masters__head-text section-heading section-heading--end">

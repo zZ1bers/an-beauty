@@ -108,3 +108,18 @@
     margin-top: 5rem;
   }
 }
+
+@media (max-width: 899px) {
+  .experience {
+    padding: 5rem var(--layout-pad) 3rem;
+  }
+
+  .experience__head {
+    margin-bottom: 2.5rem;
+    max-width: none;
+  }
+
+  .experience__cta {
+    margin-top: 2.5rem;
+  }
+}

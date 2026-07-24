@@ -195,6 +195,21 @@ body::before {
   }
 }
 
+@media (max-width: 899px) {
+  :root {
+    --layout-pad: 1.25rem;
+    --nav-h: 64px;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .page-shell {
+    overflow-x: clip;
+  }
+}
+
 /* Shared animated coral sweep on hairlines */
 .lux-line {
   position: relative;

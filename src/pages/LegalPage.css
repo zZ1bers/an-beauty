@@ -99,3 +99,17 @@
 .legal__back:hover {
   color: var(--coral);
 }
+
+@media (max-width: 899px) {
+  .legal {
+    padding: calc(var(--nav-h) + 1.75rem) 0 calc(3rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .legal__lead {
+    margin-bottom: 1.75rem;
+  }
+
+  .legal__placeholder {
+    white-space: normal;
+  }
+}

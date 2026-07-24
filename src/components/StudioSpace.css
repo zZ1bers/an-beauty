@@ -7,6 +7,10 @@
   margin: 1rem 0 0;
 }
 
+.studio > .neon-heart {
+  z-index: 1;
+}
+
 .studio__media {
   position: absolute;
   inset: 0;
@@ -30,7 +34,7 @@
 
 .studio__copy {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   max-width: calc(var(--layout-max) + 2 * var(--layout-pad));
   width: 100%;
   margin: 0 auto;
@@ -78,5 +82,15 @@
 @media (min-width: 900px) {
   .studio__copy {
     padding: 5rem var(--layout-pad);
+  }
+}
+
+@media (max-width: 899px) {
+  .studio {
+    min-height: min(68vh, 560px);
+  }
+
+  .studio__copy {
+    padding: 3.25rem var(--layout-pad);
   }
 }

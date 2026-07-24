@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { useLang } from '../i18n/LanguageContext'
+import { NeonHeart } from './NeonHeart'
 import './StudioSpace.css'
 
 export function StudioSpace() {
@@ -7,6 +8,10 @@ export function StudioSpace() {
 
   return (
     <section className="studio" id="studio">
+      <NeonHeart side="left" top="22%" size={20} delay={0.4} opacity={0.55} tilt={-18} depth="edge" />
+      <NeonHeart side="right" top="48%" size={28} delay={1.1} opacity={0.68} tilt={14} depth="mid" />
+      <NeonHeart side="left" top="78%" size={16} delay={0.7} opacity={0.45} tilt={22} depth="near" />
+
       <div className="studio__media">
         <img
           src="https://images.unsplash.com/photo-1633681926022-84c23e8cb2d6?w=1800&q=85"

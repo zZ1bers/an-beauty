@@ -8,8 +8,10 @@ export function AboutSalon() {
 
   return (
     <section className="manifesto" id="about">
-      <NeonHeart side="right" top="28%" size={20} delay={0.2} opacity={0.55} tilt={14} depth="edge" />
-      <NeonHeart side="left" top="78%" size={26} delay={1.1} opacity={0.7} tilt={-16} depth="near" />
+      <NeonHeart side="right" top="18%" size={18} delay={0.2} opacity={0.52} tilt={16} depth="edge" />
+      <NeonHeart side="left" top="42%" size={24} delay={0.85} opacity={0.62} tilt={-12} depth="mid" />
+      <NeonHeart side="right" top="72%" size={20} delay={1.3} opacity={0.48} tilt={-20} depth="near" />
+      <NeonHeart side="left" top="88%" size={16} delay={0.45} opacity={0.55} tilt={24} depth="edge" />
       <div className="manifesto__grid">
         <motion.div
           className="manifesto__left"

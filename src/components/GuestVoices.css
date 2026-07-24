@@ -22,6 +22,14 @@
   max-width: none;
 }
 
+.voices__slider {
+  width: 100%;
+}
+
+.voices__viewport {
+  width: 100%;
+}
+
 .voices__list {
   display: grid;
   gap: 1.5rem;
@@ -31,6 +39,7 @@
   margin: 0;
   padding: 0 0 1.5rem;
   border-bottom: 1px solid var(--stroke);
+  min-width: 0;
 }
 
 .voices__item:last-child {
@@ -64,6 +73,10 @@
   color: var(--text-dim);
 }
 
+.voices__dots {
+  display: none;
+}
+
 @media (min-width: 900px) {
   .voices {
     padding: 7rem var(--layout-pad) 5rem;
@@ -92,5 +105,87 @@
   .voices__item:last-child {
     border-right: none;
     padding-right: 0;
+  }
+}
+
+@media (max-width: 899px) {
+  .voices {
+    padding: 4.5rem var(--layout-pad) 3rem;
+  }
+
+  .voices__head {
+    margin-bottom: 1.75rem;
+  }
+
+  .voices__viewport {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .voices__viewport::-webkit-scrollbar {
+    display: none;
+  }
+
+  .voices__list {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.85rem;
+  }
+
+  .voices__item {
+    box-sizing: border-box;
+    flex: 0 0 calc(100% - 1.35rem);
+    min-width: calc(100% - 1.35rem);
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    padding: 1.35rem 1.25rem 1.4rem;
+    border-bottom: none;
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius-lg);
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    min-height: 13.5rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .voices__item:last-child {
+    padding-bottom: 1.4rem;
+  }
+
+  .voices__item > p {
+    max-width: none;
+    font-size: clamp(1.25rem, 5.2vw, 1.55rem);
+    line-height: 1.4;
+    margin-bottom: 1.25rem;
+    flex: 1;
+  }
+
+  .voices__dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 1.35rem;
+  }
+
+  .voices__dot {
+    width: 7px;
+    height: 7px;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: var(--stroke-strong);
+    transition: width 0.3s var(--ease-out), background 0.3s ease;
+  }
+
+  .voices__dot.is-active {
+    width: 1.35rem;
+    background: var(--coral);
   }
 }

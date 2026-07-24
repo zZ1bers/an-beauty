@@ -9,9 +9,10 @@ export function Atmosphere() {
 
   return (
     <section className="experience" id="atmosphere">
-      <NeonHeart side="left" top="30%" size={24} delay={0.8} opacity={0.6} tilt={-10} depth="edge" />
-      <NeonHeart side="right" top="58%" size={28} delay={0.4} opacity={0.72} tilt={17} depth="near" />
-      <NeonHeart side="left" top="88%" size={20} delay={1.5} opacity={0.52} tilt={-21} depth="mid" />
+      <NeonHeart side="left" top="18%" size={20} delay={0.8} opacity={0.55} tilt={-14} depth="edge" />
+      <NeonHeart side="right" top="42%" size={28} delay={0.4} opacity={0.68} tilt={19} depth="near" />
+      <NeonHeart side="left" top="68%" size={16} delay={1.5} opacity={0.48} tilt={-22} depth="mid" />
+      <NeonHeart side="right" top="90%" size={22} delay={1.0} opacity={0.58} tilt={8} depth="edge" />
 
       <div className="experience__inner layout-container">
         <header className="experience__head section-heading section-heading--end">
