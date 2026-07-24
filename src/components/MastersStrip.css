@@ -1,0 +1,338 @@
+.masters {
+  padding: 5rem 0 6.5rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.masters::before {
+  content: '';
+  position: absolute;
+  inset: 18% auto 20% -8%;
+  width: 42%;
+  background: radial-gradient(ellipse, rgba(231, 113, 125, 0.12), transparent 70%);
+  pointer-events: none;
+}
+
+.masters__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem 2rem;
+  padding: 0 1.5rem;
+  max-width: 1280px;
+  margin: 0 auto 2.5rem;
+}
+
+.masters__head-text {
+  max-width: 640px;
+}
+
+.masters__title {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  margin: 0.75rem 0 1rem;
+}
+
+.masters__sub {
+  color: var(--text-muted);
+}
+
+.masters__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.masters__nav-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--stroke-strong);
+  background: rgba(36, 30, 26, 0.65);
+  backdrop-filter: blur(12px);
+  color: var(--text);
+  transition: border-color 0.3s ease, background 0.3s ease, transform 0.35s var(--ease-lux);
+}
+
+.masters__nav-btn:hover {
+  border-color: var(--coral);
+  background: rgba(231, 113, 125, 0.15);
+  transform: scale(1.05);
+}
+
+.masters__counter {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 4.5rem;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+}
+
+.masters__counter i {
+  font-style: normal;
+  color: var(--text-dim);
+  font-size: 0.95rem;
+}
+
+.masters__counter em {
+  font-style: normal;
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+
+.masters__slider {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+  min-height: 540px;
+}
+
+.masters__stage {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  min-height: 520px;
+}
+
+.masters__card {
+  width: min(100%, 420px);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--bg-elevated), var(--bg-deep));
+  border: 1px solid var(--stroke);
+  box-shadow:
+    0 30px 70px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.03);
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.masters__card:active {
+  cursor: grabbing;
+}
+
+.masters__photo {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: var(--bg-deep);
+}
+
+.masters__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  pointer-events: none;
+}
+
+.masters__photo-glow {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 45%;
+  background: linear-gradient(to top, var(--bg-deep), transparent);
+  pointer-events: none;
+}
+
+.masters__badge {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--green);
+  background: rgba(36, 30, 26, 0.72);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--stroke);
+}
+
+.masters__body {
+  padding: 1.35rem 1.35rem 1.5rem;
+}
+
+.masters__body h3 {
+  font-size: 1.85rem;
+  margin-bottom: 0.25rem;
+}
+
+.masters__role {
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--coral);
+  margin-bottom: 0.75rem;
+}
+
+.masters__bio {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+  min-height: 2.8em;
+  line-height: 1.55;
+}
+
+.masters__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.masters__footer span {
+  font-size: 0.75rem;
+  color: var(--beige);
+}
+
+.masters__footer .btn {
+  padding: 0.7rem 1rem;
+  font-size: 0.72rem;
+}
+
+.masters__peek {
+  display: none;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+@media (min-width: 900px) {
+  .masters__peek {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.85rem;
+    opacity: 0.4;
+    filter: blur(1px) saturate(0.85);
+    transform: scale(0.86);
+    transition: opacity 0.45s ease, filter 0.45s ease, transform 0.45s var(--ease-lux);
+    user-select: none;
+    pointer-events: auto;
+  }
+
+  .masters__peek:hover {
+    opacity: 0.7;
+    filter: blur(0) saturate(1);
+    transform: scale(0.9);
+  }
+
+  .masters__peek img {
+    width: 110px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--stroke);
+  }
+
+  .masters__peek span {
+    font-size: 1.05rem;
+    color: var(--text-muted);
+    text-align: center;
+    max-width: 9ch;
+    line-height: 1.15;
+  }
+
+  .masters__peek--left {
+    transform-origin: right center;
+  }
+
+  .masters__peek--right {
+    transform-origin: left center;
+  }
+
+  .masters__peek--left:not(:hover) {
+    transform: scale(0.86) rotate(-3deg);
+  }
+
+  .masters__peek--right:not(:hover) {
+    transform: scale(0.86) rotate(3deg);
+  }
+}
+
+.masters__dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.55rem;
+  margin-top: 1.75rem;
+}
+
+.masters__dot {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+}
+
+.masters__dot span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--taupe);
+  transition: width 0.4s var(--ease-lux), background 0.3s ease;
+}
+
+.masters__dot.is-active span {
+  width: 28px;
+  background: var(--coral);
+  box-shadow: 0 0 18px var(--coral-glow);
+}
+
+.masters__dot:hover span {
+  background: var(--beige);
+}
+
+.masters__dot.is-active:hover span {
+  background: var(--coral);
+}
+
+@media (min-width: 900px) {
+  .masters__head {
+    padding: 0 3rem;
+    margin-bottom: 3rem;
+  }
+
+  .masters__slider {
+    grid-template-columns: 140px 1fr 140px;
+    gap: 1rem;
+    padding: 0 2rem;
+    min-height: 620px;
+  }
+
+  .masters__stage {
+    min-height: 600px;
+  }
+
+  .masters__card {
+    width: min(100%, 440px);
+  }
+}
+
+@media (min-width: 1200px) {
+  .masters__slider {
+    grid-template-columns: 180px 1fr 180px;
+    gap: 1.5rem;
+    padding: 0 3rem;
+  }
+
+  .masters__peek img {
+    width: 140px;
+    height: 190px;
+  }
+
+  .masters__card {
+    width: 460px;
+  }
+}

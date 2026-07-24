@@ -1,0 +1,24 @@
+.cursor-glow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0;
+  background: radial-gradient(circle, rgba(231, 113, 125, 0.16) 0%, rgba(175, 210, 117, 0.06) 40%, transparent 70%);
+  transition: opacity 0.4s ease;
+  mix-blend-mode: screen;
+}
+
+.cursor-glow.is-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .cursor-glow {
+    display: none;
+  }
+}

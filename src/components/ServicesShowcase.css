@@ -1,0 +1,229 @@
+.services {
+  padding: 6rem 1.5rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.services__head {
+  display: grid;
+  gap: 1.25rem;
+  margin-bottom: 3.5rem;
+  max-width: 900px;
+}
+
+.services__title {
+  font-size: clamp(2.4rem, 6vw, 4.5rem);
+  margin-top: 0.75rem;
+}
+
+.services__sub {
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  max-width: 36rem;
+}
+
+.services__stage {
+  display: grid;
+  gap: 2rem;
+}
+
+.services__card {
+  position: relative;
+  isolation: isolate;
+}
+
+.services__card:hover {
+  z-index: 5 !important;
+}
+
+.services__card-lift {
+  transition: transform 0.55s var(--ease-lux);
+  will-change: transform;
+}
+
+.services__card:hover .services__card-lift {
+  transform: translate3d(0, -6px, 0);
+}
+
+.services__media {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  aspect-ratio: 16 / 11;
+  background: var(--bg-deep);
+  transform: translateZ(0);
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+}
+
+.services__media img {
+  position: absolute;
+  inset: -3%;
+  width: 106%;
+  height: 106%;
+  max-width: none;
+  object-fit: cover;
+  transform: translate3d(0, 0, 0) scale(1);
+  transition: transform 1.1s var(--ease-lux);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+.services__card:hover .services__media img {
+  transform: translate3d(0, 0, 0) scale(1.05);
+}
+
+.services__media-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    rgba(26, 21, 18, 0.9) 0%,
+    rgba(26, 21, 18, 0.45) 32%,
+    transparent 68%
+  );
+}
+
+.services__info {
+  margin: -3rem 0.85rem 0;
+  position: relative;
+  z-index: 2;
+  padding: 1.35rem 1.4rem 1.5rem;
+  border-radius: var(--radius-md);
+  background: rgba(36, 30, 26, 0.95);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  border: 1px solid var(--stroke);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 16px 36px rgba(0, 0, 0, 0.38);
+}
+
+.services__meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 0.75rem;
+}
+
+.services__info h3 {
+  font-size: 1.75rem;
+  margin-bottom: 0.65rem;
+  line-height: 1.15;
+}
+
+.services__info p {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  margin-bottom: 1.25rem;
+  line-height: 1.55;
+}
+
+.services__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--coral);
+  transition: gap 0.35s var(--ease-out);
+}
+
+.services__link:hover {
+  gap: 0.7rem;
+}
+
+.services__all {
+  display: flex;
+  justify-content: center;
+  margin-top: 3rem;
+}
+
+/* Editorial mosaic: staggered, close, readable — no chaotic stacking */
+@media (min-width: 900px) {
+  .services {
+    padding: 8rem 3rem;
+  }
+
+  .services__stage {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2.5rem 1.5rem;
+    align-items: start;
+  }
+
+  .services__card--left,
+  .services__card--right {
+    width: 100%;
+    margin: 0;
+  }
+
+  /* Soft vertical rhythm — right column starts lower */
+  .services__card--right {
+    margin-top: 3.25rem;
+  }
+
+  /* Pull long card of row 2 up into the space under the short card */
+  .services__card:nth-child(4n + 3) {
+    margin-top: -8.5rem;
+  }
+
+  /* Keep short card on the right gently staggered vs its tall neighbor */
+  .services__card--right:nth-child(4n + 4) {
+    margin-top: 1.25rem;
+  }
+
+  /* Row mosaic: short+long, then long+short (repeats for any N) */
+  .services__card:nth-child(4n + 1) .services__media {
+    aspect-ratio: 5 / 4; /* short */
+  }
+
+  .services__card:nth-child(4n + 2) .services__media {
+    aspect-ratio: 4 / 5; /* long */
+  }
+
+  .services__card:nth-child(4n + 3) .services__media {
+    aspect-ratio: 4 / 5; /* long */
+  }
+
+  .services__card:nth-child(4n + 4) .services__media {
+    aspect-ratio: 5 / 4; /* short */
+  }
+
+  .services__info {
+    margin: -3.25rem 1rem 0;
+    padding: 1.4rem 1.45rem 1.5rem;
+  }
+}
+
+@media (min-width: 1200px) {
+  .services__stage {
+    gap: 2.75rem 2rem;
+  }
+
+  .services__card--right {
+    margin-top: 4rem;
+  }
+
+  .services__card:nth-child(4n + 3) {
+    margin-top: -11rem;
+  }
+
+  .services__card--right:nth-child(4n + 4) {
+    margin-top: 1.5rem;
+  }
+
+  /* Slight inset for asymmetry without overlap collisions */
+  .services__card--left {
+    padding-right: 0.75rem;
+  }
+
+  .services__card--right {
+    padding-left: 0.75rem;
+  }
+}

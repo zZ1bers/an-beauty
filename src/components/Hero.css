@@ -1,0 +1,209 @@
+.hero {
+  position: relative;
+  min-height: 100svh;
+  display: grid;
+  align-items: end;
+  overflow: visible;
+  padding: calc(var(--nav-h) + 2rem) 1.5rem 3.5rem;
+  container-type: inline-size;
+}
+
+.hero__media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.hero__video-fallback {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(120deg, rgba(26, 21, 18, 0.55) 0%, rgba(26, 21, 18, 0.25) 40%, rgba(26, 21, 18, 0.7) 100%),
+    url('https://images.unsplash.com/photo-1560066984-138dadb4c035?w=2000&q=85') center / cover no-repeat;
+  animation: heroKen 28s ease-in-out infinite alternate;
+}
+
+@keyframes heroKen {
+  from { transform: scale(1) translate(0, 0); }
+  to { transform: scale(1.08) translate(-1.5%, 1%); }
+}
+
+.hero__grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.28;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.hero__vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 70% 40%, transparent 20%, rgba(26, 21, 18, 0.55) 70%),
+    linear-gradient(to top, var(--bg-void) 0%, transparent 45%);
+}
+
+.hero__orb-1 {
+  width: 420px;
+  height: 420px;
+  background: var(--coral);
+  top: 15%;
+  right: 5%;
+  opacity: 0.25;
+}
+
+.hero__orb-2 {
+  width: 280px;
+  height: 280px;
+  background: var(--green);
+  bottom: 20%;
+  left: 8%;
+  opacity: 0.18;
+  animation-delay: -4s;
+}
+
+.hero__content {
+  position: relative;
+  z-index: 2;
+  max-width: 920px;
+  width: 100%;
+  overflow: visible;
+}
+
+.hero__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.hero__brand {
+  white-space: nowrap;
+  width: max-content;
+  max-width: none;
+  overflow: visible;
+  font-size: clamp(4.5rem, 16vw, 11rem);
+  background: linear-gradient(120deg, #fff 20%, var(--beige) 50%, var(--coral) 90%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 8s linear infinite;
+  margin-bottom: 0.35rem;
+}
+
+.hero__title {
+  font-size: clamp(1.75rem, 4.5vw, 3.25rem);
+  color: var(--text);
+  margin-bottom: 1.25rem;
+  max-width: 14ch;
+}
+
+.hero__title-line {
+  display: block;
+}
+
+.hero__sub {
+  max-width: 38rem;
+  font-size: clamp(0.95rem, 1.6vw, 1.1rem);
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+  line-height: 1.65;
+}
+
+.hero__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
+.hero__scroll {
+  position: absolute;
+  right: 1.5rem;
+  bottom: 3rem;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.hero__scroll-line {
+  width: 1px;
+  height: 64px;
+  background: linear-gradient(to bottom, var(--coral), transparent);
+  animation: pulseGlow 2.4s ease-in-out infinite;
+}
+
+.hero__float {
+  position: absolute;
+  right: 8%;
+  top: 32%;
+  z-index: 2;
+  display: none;
+  flex-direction: column;
+  padding: 1.1rem 1.35rem;
+  border-radius: var(--radius-md);
+  min-width: 140px;
+  animation: floatCard 6s ease-in-out infinite;
+}
+
+.hero__float-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 0.35rem;
+}
+
+.hero__float strong {
+  font-family: var(--font-serif);
+  font-size: 2.4rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.hero__float-meta {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+@keyframes floatCard {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-14px) rotate(1deg); }
+}
+
+@media (min-width: 900px) {
+  .hero {
+    padding: calc(var(--nav-h) + 3rem) 4rem 5rem;
+    align-items: center;
+    overflow: visible;
+  }
+
+  .hero__float {
+    display: flex;
+  }
+
+  .hero__scroll {
+    right: 3rem;
+    bottom: 4rem;
+  }
+}
+
+/* On smaller screens keep the word inside the viewport */
+@media (max-width: 899px) {
+  .hero {
+    overflow: hidden;
+  }
+
+  .hero__brand {
+    font-size: min(clamp(4.5rem, 16vw, 11rem), calc(100cqi / 7.9));
+  }
+}

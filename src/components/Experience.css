@@ -1,0 +1,128 @@
+.experience {
+  padding: 5rem 1.5rem 7rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.experience__head {
+  margin-bottom: 3rem;
+  max-width: 700px;
+}
+
+.experience__title {
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  margin-top: 0.75rem;
+}
+
+.experience__intro {
+  margin-top: 1rem;
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  line-height: 1.6;
+  max-width: 42rem;
+}
+
+.experience__grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.experience__grid--salon {
+  grid-template-columns: 1fr;
+}
+
+.experience__card {
+  display: block;
+  padding: 1.75rem;
+  border-radius: var(--radius-lg);
+  min-height: 240px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.5s var(--ease-lux), border-color 0.4s ease;
+}
+
+.experience__card::before {
+  content: '';
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  filter: blur(50px);
+  opacity: 0.35;
+  top: -40px;
+  right: -30px;
+  transition: opacity 0.4s ease;
+}
+
+.experience__card--coral::before { background: var(--coral); }
+.experience__card--beige::before { background: var(--beige); }
+.experience__card--green::before { background: var(--green); }
+.experience__card--taupe::before { background: var(--taupe); }
+
+.experience__card:hover {
+  transform: translateY(-6px);
+  border-color: var(--stroke-strong);
+}
+
+.experience__card:hover::before {
+  opacity: 0.55;
+}
+
+.experience__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--stroke);
+  margin-bottom: 1.5rem;
+  color: var(--coral);
+}
+
+.experience__card--green .experience__icon { color: var(--green); }
+.experience__card--beige .experience__icon { color: var(--beige); }
+
+.experience__card h3 {
+  font-size: 1.85rem;
+  margin-bottom: 0.65rem;
+  position: relative;
+}
+
+.experience__card p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  position: relative;
+  max-width: 28ch;
+}
+
+.experience__cta {
+  display: flex;
+  justify-content: center;
+  margin-top: 2.5rem;
+}
+
+@media (min-width: 800px) {
+  .experience {
+    padding: 6rem 3rem 9rem;
+  }
+
+  .experience__grid--salon {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+  }
+
+  .experience__grid--salon .experience__card:nth-child(2) {
+    transform: translateY(28px);
+  }
+
+  .experience__grid--salon .experience__card:nth-child(2):hover {
+    transform: translateY(22px);
+  }
+
+  .experience__card {
+    padding: 2rem;
+    min-height: 280px;
+  }
+}

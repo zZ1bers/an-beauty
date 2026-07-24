@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: anbeauty-db
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: anbeauty
+      POSTGRES_PASSWORD: anbeauty
+      POSTGRES_DB: anbeauty
+    volumes:
+      - anbeauty_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U anbeauty -d anbeauty']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  anbeauty_pgdata:

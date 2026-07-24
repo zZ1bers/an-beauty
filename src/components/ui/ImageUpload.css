@@ -1,0 +1,76 @@
+.image-upload {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.image-upload__label {
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.image-upload__row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.image-upload__preview {
+  width: 96px;
+  height: 96px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--stroke);
+  background: rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+}
+
+.image-upload__preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-upload__placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--text-dim);
+}
+
+.image-upload__actions {
+  display: grid;
+  gap: 0.45rem;
+  min-width: min(220px, 100%);
+}
+
+.image-upload__actions .btn {
+  justify-self: start;
+  gap: 0.45rem;
+}
+
+.image-upload__hint {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.image-upload__error {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--coral);
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
