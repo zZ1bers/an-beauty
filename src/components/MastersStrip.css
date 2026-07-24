@@ -50,7 +50,7 @@
   display: grid;
   place-items: center;
   border: 1px solid var(--stroke-strong);
-  background: rgba(36, 30, 26, 0.65);
+  background: var(--panel-solid);
   backdrop-filter: blur(12px);
   color: var(--text);
   transition: border-color 0.3s ease, background 0.3s ease, transform 0.35s var(--ease-lux);
@@ -154,7 +154,7 @@
   border-radius: 999px;
   font-size: 0.75rem;
   color: var(--green);
-  background: rgba(36, 30, 26, 0.72);
+  background: var(--panel-solid);
   backdrop-filter: blur(14px);
   border: 1px solid var(--stroke);
 }

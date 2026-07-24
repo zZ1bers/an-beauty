@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { LanguageProvider } from './i18n/LanguageContext'
+import { ThemeProvider } from './theme/ThemeContext'
 import { AuthProvider } from './auth/AuthContext'
 import { RequireAuth } from './auth/RequireAuth'
 import { ToastProvider } from './components/ui/Toast'
@@ -12,6 +13,7 @@ import { StaffPage } from './pages/StaffPage'
 import { AdminPage } from './pages/AdminPage'
 import { LoginPage } from './pages/LoginPage'
 import { CursorGlow } from './components/CursorGlow'
+import { AmbientBackdrop } from './components/AmbientBackdrop'
 import './styles/global.css'
 
 function AnimatedRoutes() {
@@ -53,16 +55,19 @@ function AnimatedRoutes() {
 
 export default function App() {
   return (
-    <LanguageProvider>
-      <AuthProvider>
-        <ToastProvider>
-          <BrowserRouter>
-            <CursorGlow />
-            <Navigation />
-            <AnimatedRoutes />
-          </BrowserRouter>
-        </ToastProvider>
-      </AuthProvider>
-    </LanguageProvider>
+    <ThemeProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <BrowserRouter>
+              <AmbientBackdrop />
+              <CursorGlow />
+              <Navigation />
+              <AnimatedRoutes />
+            </BrowserRouter>
+          </ToastProvider>
+        </AuthProvider>
+      </LanguageProvider>
+    </ThemeProvider>
   )
 }

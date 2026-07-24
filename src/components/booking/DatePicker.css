@@ -121,10 +121,10 @@
 }
 
 .date-picker__day.is-closed {
-  background: rgba(0, 0, 0, 0.38);
+  background: var(--closed-day-bg);
   border-color: rgba(255, 255, 255, 0.04);
   color: var(--text-dim);
-  opacity: 0.55;
+  opacity: 0.7;
   cursor: not-allowed;
   transform: none;
 }
@@ -223,11 +223,11 @@
 }
 
 .date-picker__cell.is-closed {
-  background: rgba(0, 0, 0, 0.35);
-  color: rgba(244, 239, 233, 0.28);
+  background: var(--closed-day-bg);
+  color: var(--text-dim);
   border-color: transparent;
   text-decoration: line-through;
-  text-decoration-color: rgba(244, 239, 233, 0.2);
+  text-decoration-color: var(--text-dim);
 }
 
 .date-picker__cell.is-today:not(.is-selected):not(.is-closed) {

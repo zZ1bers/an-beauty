@@ -19,7 +19,7 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(120deg, rgba(26, 21, 18, 0.55) 0%, rgba(26, 21, 18, 0.25) 40%, rgba(26, 21, 18, 0.7) 100%),
+    linear-gradient(120deg, var(--scrim-soft) 0%, transparent 40%, var(--scrim-mid) 100%),
     url('https://images.unsplash.com/photo-1560066984-138dadb4c035?w=2000&q=85') center / cover no-repeat;
   animation: heroKen 28s ease-in-out infinite alternate;
 }
@@ -41,7 +41,7 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at 70% 40%, transparent 20%, rgba(26, 21, 18, 0.55) 70%),
+    radial-gradient(ellipse at 70% 40%, transparent 20%, var(--scrim-soft) 70%),
     linear-gradient(to top, var(--bg-void) 0%, transparent 45%);
 }
 
@@ -96,7 +96,7 @@
 
 .hero__title {
   font-size: clamp(1.75rem, 4.5vw, 3.25rem);
-  color: var(--text);
+  color: #f4efe9;
   margin-bottom: 1.25rem;
   max-width: 14ch;
 }
@@ -108,7 +108,7 @@
 .hero__sub {
   max-width: 38rem;
   font-size: clamp(0.95rem, 1.6vw, 1.1rem);
-  color: var(--text-muted);
+  color: rgba(244, 239, 233, 0.78);
   margin-bottom: 2rem;
   line-height: 1.65;
 }
@@ -117,6 +117,19 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.85rem;
+}
+
+.hero__cta .btn-ghost {
+  color: #f4efe9;
+  border-color: rgba(244, 239, 233, 0.45);
+  background: rgba(26, 21, 18, 0.28);
+  backdrop-filter: blur(10px);
+}
+
+.hero__cta .btn-ghost:hover {
+  color: #fff;
+  border-color: rgba(244, 239, 233, 0.75);
+  background: rgba(26, 21, 18, 0.45);
 }
 
 .hero__scroll {
@@ -131,7 +144,7 @@
   font-size: 0.65rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: rgba(244, 239, 233, 0.45);
 }
 
 .hero__scroll-line {

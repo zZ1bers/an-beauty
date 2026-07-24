@@ -10,6 +10,8 @@ export const translations = {
       cabinet: 'Мои записи',
       staff: 'Мастер',
       admin: 'Админ',
+      themeLight: 'Светлая тема',
+      themeDark: 'Тёмная тема',
     },
     hero: {
       brand: 'AN.Beauty',
@@ -204,6 +206,8 @@ export const translations = {
       cabinet: 'Meine Termine',
       staff: 'Mitarbeiter',
       admin: 'Admin',
+      themeLight: 'Helles Theme',
+      themeDark: 'Dunkles Theme',
     },
     hero: {
       brand: 'AN.Beauty',

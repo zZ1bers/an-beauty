@@ -3,11 +3,7 @@
   display: grid;
   place-items: center;
   padding: 6rem 1.25rem 3rem;
-  color: #2a211c;
-  background:
-    radial-gradient(ellipse 80% 50% at 20% 0%, rgba(231, 113, 125, 0.18), transparent 55%),
-    radial-gradient(ellipse 60% 40% at 90% 100%, rgba(175, 210, 117, 0.12), transparent 50%),
-    #f7f3ef;
+  color: var(--text);
 }
 
 .login__card {
@@ -17,22 +13,19 @@
   flex-direction: column;
   gap: 0.85rem;
   border-radius: 1.25rem;
-  color: #2a211c;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(126, 104, 90, 0.18);
+  color: var(--text);
 }
 
 .login__title {
   font-size: clamp(2rem, 4vw, 2.6rem);
   margin: 0.15rem 0 0;
-  color: #1a1512;
+  color: var(--text);
 }
 
 .login__sub {
   margin: 0 0 0.5rem;
-  color: rgba(42, 33, 28, 0.7);
+  color: var(--text-muted);
   font-size: 0.95rem;
-  opacity: 1;
 }
 
 .login__card label {
@@ -42,24 +35,23 @@
   font-size: 0.8rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: rgba(42, 33, 28, 0.75);
-  opacity: 1;
+  color: var(--text-muted);
 }
 
 .login__card input {
-  border: 1px solid rgba(126, 104, 90, 0.28);
-  background: #fff;
+  border: 1px solid var(--stroke-strong);
+  background: var(--bg-elevated);
   border-radius: 0.65rem;
   padding: 0.7rem 0.85rem;
   font: inherit;
   font-size: 1rem;
   text-transform: none;
   letter-spacing: normal;
-  color: #1a1512;
+  color: var(--text);
 }
 
 .login__card input::placeholder {
-  color: rgba(42, 33, 28, 0.4);
+  color: var(--text-dim);
 }
 
 .login__row {
@@ -70,36 +62,29 @@
 
 .login__error {
   margin: 0;
-  color: #b33a3a;
+  color: var(--coral-deep);
   font-size: 0.9rem;
 }
 
 .login__switch {
   background: none;
   border: none;
-  color: #5c4a3d;
+  color: var(--taupe);
   cursor: pointer;
   text-decoration: underline;
   font: inherit;
   padding: 0.25rem 0;
-  opacity: 1;
 }
 
 .login__demo {
   margin: 0.5rem 0 0;
   font-size: 0.72rem;
   line-height: 1.45;
-  color: rgba(42, 33, 28, 0.55);
-  opacity: 1;
+  color: var(--text-dim);
 }
 
 .login__home {
   margin-top: 0.25rem;
   font-size: 0.85rem;
-  color: #5c4a3d;
-  opacity: 1;
-}
-
-.login .eyebrow {
-  color: #c45b66;
+  color: var(--taupe);
 }

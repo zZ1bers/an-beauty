@@ -548,7 +548,7 @@
   display: grid;
   place-items: center;
   padding: 1.25rem;
-  background: rgba(20, 16, 14, 0.55);
+  background: var(--overlay);
   backdrop-filter: blur(8px);
 }
 

@@ -17,6 +17,15 @@
   opacity: 1;
 }
 
+html[data-theme='light'] .cursor-glow {
+  mix-blend-mode: multiply;
+  background: radial-gradient(circle, rgba(231, 113, 125, 0.18) 0%, rgba(175, 210, 117, 0.08) 40%, transparent 70%);
+}
+
+html[data-theme='light'] .cursor-glow.is-visible {
+  opacity: 0.7;
+}
+
 @media (hover: none) {
   .cursor-glow {
     display: none;

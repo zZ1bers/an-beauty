@@ -1,8 +1,9 @@
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, Globe, LogOut, Bell } from 'lucide-react'
+import { Menu, X, Globe, LogOut, Bell, Sun, Moon } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useLang } from '../i18n/LanguageContext'
+import { useTheme } from '../theme/ThemeContext'
 import { useAuth, homeForRole } from '../auth/AuthContext'
 import { api, ApiError } from '../lib/api'
 import { Drawer } from './ui/Drawer'
@@ -19,6 +20,7 @@ type NotificationItem = {
 
 export function Navigation() {
   const { t, locale, setLocale } = useLang()
+  const { theme, toggleTheme } = useTheme()
   const { user, logout } = useAuth()
   const toast = useToast()
   const [open, setOpen] = useState(false)
@@ -110,6 +112,14 @@ export function Navigation() {
         </nav>
 
         <div className="nav__actions">
+          <button
+            className="nav__lang"
+            onClick={() => toggleTheme()}
+            aria-label={theme === 'light' ? t.nav.themeDark : t.nav.themeLight}
+            title={theme === 'light' ? t.nav.themeDark : t.nav.themeLight}
+          >
+            {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+          </button>
           <button
             className="nav__lang"
             onClick={() => setLocale(locale === 'ru' ? 'de' : 'ru')}

@@ -1,0 +1,121 @@
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ambient__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(72px);
+  will-change: transform;
+  animation: ambientFloat 22s var(--ease-lux) infinite alternate;
+}
+
+.ambient__orb--coral {
+  width: min(52vw, 560px);
+  height: min(52vw, 560px);
+  top: -8%;
+  left: -10%;
+  background: radial-gradient(circle, rgba(231, 113, 125, 0.42), transparent 68%);
+  opacity: 0.55;
+  animation-duration: 26s;
+}
+
+.ambient__orb--green {
+  width: min(44vw, 480px);
+  height: min(44vw, 480px);
+  top: 18%;
+  right: -12%;
+  background: radial-gradient(circle, rgba(175, 210, 117, 0.36), transparent 70%);
+  opacity: 0.45;
+  animation-duration: 30s;
+  animation-delay: -6s;
+}
+
+.ambient__orb--taupe {
+  width: min(60vw, 640px);
+  height: min(48vw, 520px);
+  bottom: -18%;
+  left: 20%;
+  background: radial-gradient(circle, rgba(126, 104, 90, 0.38), transparent 72%);
+  opacity: 0.5;
+  animation-duration: 34s;
+  animation-delay: -12s;
+}
+
+.ambient__orb--soft {
+  width: min(36vw, 380px);
+  height: min(36vw, 380px);
+  top: 55%;
+  left: 8%;
+  background: radial-gradient(circle, rgba(231, 113, 125, 0.22), transparent 70%);
+  opacity: 0.4;
+  animation-duration: 20s;
+  animation-delay: -3s;
+}
+
+.ambient__mesh {
+  position: absolute;
+  inset: 0;
+  opacity: var(--ambient-mesh-opacity, 0.22);
+  background-image:
+    radial-gradient(circle at 1px 1px, var(--ambient-dot, rgba(244, 239, 233, 0.14)) 1px, transparent 0),
+    linear-gradient(135deg, transparent 48%, var(--ambient-line, rgba(194, 185, 176, 0.05)) 49.5%, transparent 51%);
+  background-size: 32px 32px, 140px 140px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 20%, transparent 85%);
+}
+
+.ambient__grain {
+  position: absolute;
+  inset: 0;
+  opacity: var(--ambient-grain-opacity, 0.18);
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 220 220' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+html[data-theme='light'] .ambient__orb--coral {
+  background: radial-gradient(circle, rgba(231, 113, 125, 0.34), transparent 68%);
+  opacity: 0.7;
+}
+
+html[data-theme='light'] .ambient__orb--green {
+  background: radial-gradient(circle, rgba(175, 210, 117, 0.32), transparent 70%);
+  opacity: 0.55;
+}
+
+html[data-theme='light'] .ambient__orb--taupe {
+  background: radial-gradient(circle, rgba(126, 104, 90, 0.22), transparent 72%);
+  opacity: 0.55;
+}
+
+html[data-theme='light'] .ambient__orb--soft {
+  background: radial-gradient(circle, rgba(231, 113, 125, 0.2), transparent 70%);
+  opacity: 0.5;
+}
+
+html[data-theme='light'] .ambient__grain {
+  mix-blend-mode: multiply;
+  opacity: 0.08;
+}
+
+@keyframes ambientFloat {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(28px, -36px, 0) scale(1.08);
+  }
+  100% {
+    transform: translate3d(-18px, 22px, 0) scale(0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient__orb {
+    animation: none;
+  }
+}

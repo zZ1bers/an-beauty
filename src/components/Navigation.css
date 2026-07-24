@@ -9,7 +9,7 @@
 }
 
 .nav--portal .nav__inner {
-  background: rgba(36, 30, 26, 0.85);
+  background: var(--nav-portal-bg);
 }
 
 .nav__inner {
@@ -202,7 +202,7 @@
   inset: 0;
   z-index: 200;
   border: none;
-  background: rgba(20, 16, 14, 0.55);
+  background: var(--overlay);
   backdrop-filter: blur(6px);
   cursor: pointer;
 }
