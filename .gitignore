@@ -29,9 +29,17 @@ dist-ssr
 # Env / secrets
 .env
 server/.env
+deploy/.env
+.env.production
 .env.*.local
 !.env.example
+!deploy/.env.production.example
 
 # Uploaded media
 server/uploads/*
 !server/uploads/.gitkeep
+
+# Database dumps
+backups/*
+!backups/.gitkeep
+*.dump

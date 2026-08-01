@@ -15,6 +15,7 @@
     "db:seed": "npm run db:seed --prefix server",
     "db:studio": "npm run db:studio --prefix server",
     "db:generate": "npm run db:generate --prefix server",
+    "db:backup": "powershell -ExecutionPolicy Bypass -File ./scripts/backup-db.ps1",
     "api:dev": "npm run dev --prefix server",
     "api:build": "npm run build --prefix server",
     "api:start": "npm run start --prefix server"

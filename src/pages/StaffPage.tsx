@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Clock3, NotebookPen, Users, Activity, CalendarRange, LogOut, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useLang } from '../i18n/LanguageContext'
 import { useAuth } from '../auth/AuthContext'
 import { api, ApiError } from '../lib/api'
-import { confirmAction } from '../components/ui/Modal'
+import { ConfirmDialog } from '../components/ui/Modal'
 import { useToast } from '../components/ui/Toast'
 import {
   addDays,
@@ -20,6 +20,7 @@ import {
   startOfMonth,
   toTimeStr,
   todayISO,
+  toDateStr,
 } from '../lib/datetime'
 import './Portal.css'
 
@@ -30,7 +31,7 @@ type MasterBooking = {
   status: string
   notes: string | null
   service: { name: { ru: string; de: string } }
-  client: { id: string; name: string; phone: string | null; allergies: string | null }
+  client: { id: string; name: string; allergies: string | null; isGuest?: boolean }
 }
 
 type TimeOff = { id: string; startsAt: string; endsAt: string; reason: string | null }
@@ -95,6 +96,11 @@ export function StaffPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [busyAction, setBusyAction] = useState(false)
+  const [clientsScope, setClientsScope] = useState<'day' | 'all'>('day')
+  const [allBookings, setAllBookings] = useState<MasterBooking[]>([])
+  const [allLoading, setAllLoading] = useState(false)
+  const [cancelId, setCancelId] = useState<string | null>(null)
+  const [cancelBusy, setCancelBusy] = useState(false)
 
   const dayLabels = locale === 'ru' ? DAY_LABELS_RU : DAY_LABELS_DE
   const headLabels = locale === 'ru' ? HEAD_RU : HEAD_DE
@@ -231,6 +237,37 @@ export function StaffPage() {
     .filter((b) => b.status === 'confirmed' || b.status === 'pending')
     .sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt))
 
+  const loadAllBookings = useCallback(async () => {
+    setAllLoading(true)
+    try {
+      const rows = await api<MasterBooking[]>('/master/bookings')
+      setAllBookings(rows.sort((a, b) => +new Date(b.startsAt) - +new Date(a.startsAt)))
+    } catch (e) {
+      toast.push(e instanceof ApiError ? e.message : 'Error', 'err')
+    } finally {
+      setAllLoading(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (clientsScope === 'all') void loadAllBookings()
+  }, [clientsScope, loadAllBookings])
+
+  const clientBookings = clientsScope === 'day' ? todayBookings : allBookings
+
+  const clientBookingsGrouped = useMemo(() => {
+    if (clientsScope !== 'all') return null
+    const groups: { day: string; items: MasterBooking[] }[] = []
+    for (const b of allBookings) {
+      const day = toDateStr(new Date(b.startsAt))
+      const last = groups[groups.length - 1]
+      if (last && last.day === day) last.items.push(b)
+      else groups.push({ day, items: [b] })
+    }
+    return groups
+  }, [clientsScope, allBookings])
+
   const patchBooking = async (id: string, status: string) => {
     try {
       await api(`/master/bookings/${id}`, {
@@ -239,14 +276,33 @@ export function StaffPage() {
       })
       toast.push(t.admin.save)
       await loadData()
+      if (clientsScope === 'all') await loadAllBookings()
     } catch (e) {
       toast.push(e instanceof ApiError ? e.message : 'Error', 'err')
     }
   }
 
+  const confirmCancelBooking = async () => {
+    if (!cancelId) return
+    setCancelBusy(true)
+    try {
+      await patchBooking(cancelId, 'CANCELLED')
+      setCancelId(null)
+    } finally {
+      setCancelBusy(false)
+    }
+  }
+
+  const noteTarget = clientBookings.find((b) => b.client.id === noteClientId)?.client
+  const noteIsGuest = !!noteTarget?.isGuest || noteClientId.startsWith('guest:')
+
   const saveNote = async () => {
     if (!noteClientId || !note.trim()) {
       toast.push(t.staff.selectClient, 'err')
+      return
+    }
+    if (noteIsGuest) {
+      toast.push(t.staff.guestNoNotes, 'err')
       return
     }
     try {
@@ -488,66 +544,161 @@ export function StaffPage() {
               </section>
 
               <section className="portal__panel glass-strong">
-                <div className="portal__panel-head">
-                  <Users size={18} />
-                  <h2>{t.staff.clients}</h2>
+                <div className="portal__panel-head staff-clients-head">
+                  <div className="staff-clients-head__title">
+                    <Users size={18} />
+                    <h2>{t.staff.clients}</h2>
+                  </div>
+                  <div className="staff-clients-scope" role="group" aria-label={t.staff.clients}>
+                    <button
+                      type="button"
+                      className={`staff-clients-scope__btn ${clientsScope === 'day' ? 'is-active' : ''}`}
+                      onClick={() => setClientsScope('day')}
+                    >
+                      {t.staff.clientsDay}
+                    </button>
+                    <button
+                      type="button"
+                      className={`staff-clients-scope__btn ${clientsScope === 'all' ? 'is-active' : ''}`}
+                      onClick={() => setClientsScope('all')}
+                    >
+                      {t.staff.clientsAll}
+                    </button>
+                  </div>
                 </div>
-                <div className="portal__bookings">
-                  {todayBookings.length === 0 && <p className="portal__empty">—</p>}
-                  {todayBookings.map((b, i) => {
-                    const time = toTimeStr(new Date(b.startsAt))
-                    return (
-                      <motion.article
-                        key={b.id}
-                        className={`portal__booking ${noteClientId === b.client.id ? 'is-selected' : ''}`}
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.06 }}
-                        onClick={() => setNoteClientId(b.client.id)}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <div className="portal__booking-time">{time}</div>
-                        <div>
-                          <strong>{b.client.name}</strong>
-                          <p>{b.service.name[locale]}</p>
-                          {b.client.phone && <span className="portal__hint">{b.client.phone}</span>}
-                          {(b.notes || b.client.allergies) && (
-                            <span className="portal__hint">{b.notes || b.client.allergies}</span>
-                          )}
-                          <div className="portal__actions">
-                            <button
-                              className="btn btn-green"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                void patchBooking(b.id, 'COMPLETED')
-                              }}
-                            >
-                              {t.staff.complete}
-                            </button>
-                            <button
-                              className="btn btn-ghost"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                void patchBooking(b.id, 'NO_SHOW')
-                              }}
-                            >
-                              {t.staff.noshow}
-                            </button>
-                            <button
-                              className="btn btn-ghost"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                if (!confirmAction(t.client.confirmCancel)) return
-                                void patchBooking(b.id, 'CANCELLED')
-                              }}
-                            >
-                              {t.client.cancel}
-                            </button>
+                <div className="portal__bookings staff-clients-list">
+                  {allLoading && clientsScope === 'all' && (
+                    <p className="portal__loading">{t.admin.loading}</p>
+                  )}
+                  {!allLoading && clientBookings.length === 0 && <p className="portal__empty">—</p>}
+
+                  {clientsScope === 'day' &&
+                    todayBookings.map((b, i) => {
+                      const time = toTimeStr(new Date(b.startsAt))
+                      const actionable = b.status === 'confirmed' || b.status === 'pending'
+                      return (
+                        <motion.article
+                          key={b.id}
+                          className={`portal__booking ${noteClientId === b.client.id ? 'is-selected' : ''}`}
+                          initial={{ opacity: 0, y: 16 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.06 }}
+                          onClick={() => setNoteClientId(b.client.id)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <div className="portal__booking-time">{time}</div>
+                          <div>
+                            <strong>
+                              {b.client.name}
+                              {b.client.isGuest ? (
+                                <em className="admin__guest-tag"> · {t.staff.walkInGuest}</em>
+                              ) : null}
+                            </strong>
+                            <p>{b.service.name[locale]}</p>
+                            {(b.notes || b.client.allergies) && (
+                              <span className="portal__hint">{b.notes || b.client.allergies}</span>
+                            )}
+                            {actionable && (
+                              <div className="portal__actions">
+                                <button
+                                  className="btn btn-green"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    void patchBooking(b.id, 'COMPLETED')
+                                  }}
+                                >
+                                  {t.staff.complete}
+                                </button>
+                                <button
+                                  className="btn btn-ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    void patchBooking(b.id, 'NO_SHOW')
+                                  }}
+                                >
+                                  {t.staff.noshow}
+                                </button>
+                                <button
+                                  className="btn btn-ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setCancelId(b.id)
+                                  }}
+                                >
+                                  {t.client.cancel}
+                                </button>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      </motion.article>
-                    )
-                  })}
+                        </motion.article>
+                      )
+                    })}
+
+                  {clientsScope === 'all' &&
+                    !allLoading &&
+                    clientBookingsGrouped?.map((group) => (
+                      <div key={group.day} className="staff-clients-day">
+                        <p className="staff-clients-day__label">{formatDayLabel(group.day, locale)}</p>
+                        {group.items.map((b) => {
+                          const time = toTimeStr(new Date(b.startsAt))
+                          const actionable = b.status === 'confirmed' || b.status === 'pending'
+                          return (
+                            <article
+                              key={b.id}
+                              className={`portal__booking ${noteClientId === b.client.id ? 'is-selected' : ''}`}
+                              onClick={() => setNoteClientId(b.client.id)}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              <div className="portal__booking-time">{time}</div>
+                              <div>
+                                <strong>
+                                  {b.client.name}
+                                  {b.client.isGuest ? (
+                                    <em className="admin__guest-tag"> · {t.staff.walkInGuest}</em>
+                                  ) : null}
+                                </strong>
+                                <p>{b.service.name[locale]}</p>
+                                <span className="portal__hint">{b.status}</span>
+                                {(b.notes || b.client.allergies) && (
+                                  <span className="portal__hint">{b.notes || b.client.allergies}</span>
+                                )}
+                                {actionable && (
+                                  <div className="portal__actions">
+                                    <button
+                                      className="btn btn-green"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        void patchBooking(b.id, 'COMPLETED')
+                                      }}
+                                    >
+                                      {t.staff.complete}
+                                    </button>
+                                    <button
+                                      className="btn btn-ghost"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        void patchBooking(b.id, 'NO_SHOW')
+                                      }}
+                                    >
+                                      {t.staff.noshow}
+                                    </button>
+                                    <button
+                                      className="btn btn-ghost"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setCancelId(b.id)
+                                      }}
+                                    >
+                                      {t.client.cancel}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </article>
+                          )
+                        })}
+                      </div>
+                    ))}
                 </div>
               </section>
 
@@ -557,18 +708,24 @@ export function StaffPage() {
                   <h2>{t.staff.notes}</h2>
                 </div>
                 <p className="portal__hint" style={{ marginBottom: '0.75rem' }}>
-                  {noteClientId
-                    ? todayBookings.find((b) => b.client.id === noteClientId)?.client.name ??
-                      noteClientId
-                    : t.staff.selectClient}
+                  {!noteClientId
+                    ? t.staff.selectClient
+                    : noteIsGuest
+                      ? t.staff.guestNoNotes
+                      : (noteTarget?.name ?? noteClientId)}
                 </p>
                 <textarea
                   className="portal__notes"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={3}
+                  disabled={noteIsGuest || !noteClientId}
                 />
-                <button className="btn btn-primary" onClick={() => void saveNote()}>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => void saveNote()}
+                  disabled={noteIsGuest || !noteClientId}
+                >
                   {t.admin.save}
                 </button>
               </section>
@@ -757,6 +914,17 @@ export function StaffPage() {
           </section>
         )}
       </div>
+
+      <ConfirmDialog
+        open={cancelId !== null}
+        title={t.staff.confirmCancelTitle}
+        body={t.staff.confirmCancelBody}
+        confirmLabel={t.staff.confirmCancelYes}
+        cancelLabel={t.staff.confirmCancelNo}
+        busy={cancelBusy}
+        onClose={() => setCancelId(null)}
+        onConfirm={() => void confirmCancelBooking()}
+      />
     </main>
   )
 }

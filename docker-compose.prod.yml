@@ -1,0 +1,80 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: anbeauty-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-anbeauty}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-anbeauty}
+    volumes:
+      - anbeauty_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - anbeauty
+
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: anbeauty-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-anbeauty}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-anbeauty}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN:?Set CORS_ORIGIN}
+      PUBLIC_URL: ${PUBLIC_URL:?Set PUBLIC_URL}
+    volumes:
+      - anbeauty_uploads:/app/uploads
+    networks:
+      - anbeauty
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        VITE_API_URL: /api
+    container_name: anbeauty-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    networks:
+      - anbeauty
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: anbeauty-caddy
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN e.g. anbeauty.example.com}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - anbeauty
+
+volumes:
+  anbeauty_pgdata:
+  anbeauty_uploads:
+  caddy_data:
+  caddy_config:
+
+networks:
+  anbeauty:
+    driver: bridge

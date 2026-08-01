@@ -62,3 +62,50 @@ export function Modal({ open, title, onClose, children, wide }: ModalProps) {
 export function confirmAction(message: string) {
   return window.confirm(message)
 }
+
+type ConfirmDialogProps = {
+  open: boolean
+  title: string
+  body: string
+  confirmLabel: string
+  cancelLabel: string
+  busy?: boolean
+  onConfirm: () => void
+  onClose: () => void
+}
+
+export function ConfirmDialog({
+  open,
+  title,
+  body,
+  confirmLabel,
+  cancelLabel,
+  busy,
+  onConfirm,
+  onClose,
+}: ConfirmDialogProps) {
+  return (
+    <Modal
+      open={open}
+      title={title}
+      onClose={() => {
+        if (!busy) onClose()
+      }}
+    >
+      <p className="confirm-dialog__body">{body}</p>
+      <div className="confirm-dialog__actions">
+        <button type="button" className="btn btn-ghost" disabled={busy} onClick={onClose}>
+          {cancelLabel}
+        </button>
+        <button
+          type="button"
+          className="btn btn-primary confirm-dialog__danger"
+          disabled={busy}
+          onClick={onConfirm}
+        >
+          {confirmLabel}
+        </button>
+      </div>
+    </Modal>
+  )
+}

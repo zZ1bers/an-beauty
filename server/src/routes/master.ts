@@ -96,7 +96,8 @@ export async function masterRoutes(app: FastifyInstance) {
         service: true,
         client: {
           include: {
-            user: { select: { firstName: true, lastName: true, phone: true } },
+            // Masters must not receive client contact (email/phone) — name + notes only
+            user: { select: { firstName: true, lastName: true } },
           },
         },
       },
@@ -114,10 +115,12 @@ export async function masterRoutes(app: FastifyInstance) {
         name: { ru: b.service.nameRu, de: b.service.nameDe },
       },
       client: {
-        id: b.client.id,
-        name: `${b.client.user.firstName} ${b.client.user.lastName}`,
-        phone: b.client.user.phone,
-        allergies: b.client.allergies,
+        id: b.clientId ?? `guest:${b.id}`,
+        name: b.client
+          ? `${b.client.user.firstName} ${b.client.user.lastName}`
+          : `${b.guestFirstName ?? ''} ${b.guestLastName ?? ''}`.trim() || 'Walk-in',
+        allergies: b.client?.allergies ?? null,
+        isGuest: !b.clientId,
       },
     }))
   })
@@ -147,7 +150,7 @@ export async function masterRoutes(app: FastifyInstance) {
       },
     })
 
-    if (body.data.status === 'COMPLETED') {
+    if (body.data.status === 'COMPLETED' && booking.clientId) {
       await prisma.clientProfile.update({
         where: { id: booking.clientId },
         data: {

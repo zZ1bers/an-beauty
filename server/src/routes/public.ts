@@ -151,8 +151,8 @@ export async function publicRoutes(app: FastifyInstance) {
       duration = service.durationMin
     }
 
-    const slots = await getAvailableSlots(id, q.data.date, duration)
-    return { date: q.data.date, slots }
+    const { slots, dayOff } = await getAvailableSlots(id, q.data.date, duration)
+    return { date: q.data.date, slots, dayOff }
   })
 
   app.get('/promos/active', async () => {

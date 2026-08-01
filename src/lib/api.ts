@@ -61,3 +61,32 @@ export async function api<T>(
 }
 
 export const apiUrl = API_URL
+
+/** Download binary response (PDF etc.) with auth. */
+export async function apiDownload(path: string, filename: string) {
+  const headers = new Headers()
+  const token = getToken()
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+
+  const res = await fetch(`${API_URL}${path}`, { headers })
+  if (!res.ok) {
+    let message = res.statusText
+    try {
+      const data = (await res.json()) as { error?: string }
+      if (data.error) message = data.error
+    } catch {
+      /* ignore */
+    }
+    throw new ApiError(res.status, message)
+  }
+
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}

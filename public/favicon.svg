@@ -1,5 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <rect width="64" height="64" rx="14" fill="#7E685A"/>
-  <path d="M18 42 L32 14 L46 42" stroke="#E7717D" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="32" cy="46" r="3" fill="#AFD275"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="AN.Beauty">
+  <path fill="#ffffff" d="
+    M2 54
+    L22 10
+    H28.5
+    L48.5 54
+    H38.5
+    L34.8 43.5
+    H15.7
+    L12 54
+    Z
+    M18.5 37
+    H32
+    L25.25 19.5
+    Z
+  "/>
+  <rect x="53" y="47" width="6.5" height="6.5" fill="#E7717D"/>
 </svg>

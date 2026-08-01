@@ -139,7 +139,8 @@ model MasterService {
 
 model Booking {
   id            String        @id @default(cuid())
-  clientId      String
+  /// Null for walk-in bookings created by admin (no client account)
+  clientId      String?
   masterId      String
   serviceId     String
   startsAt      DateTime
@@ -147,14 +148,18 @@ model Booking {
   status        BookingStatus @default(PENDING)
   priceSnapshot Decimal       @db.Decimal(10, 2)
   notes         String?
+  /// Walk-in guest name when clientId is null
+  guestFirstName String?
+  guestLastName  String?
+  guestPhone     String?
   cancelledAt   DateTime?
   createdBy     String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  client  ClientProfile @relation(fields: [clientId], references: [id])
-  master  MasterProfile @relation(fields: [masterId], references: [id])
-  service Service       @relation(fields: [serviceId], references: [id])
+  client  ClientProfile? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  master  MasterProfile  @relation(fields: [masterId], references: [id])
+  service Service        @relation(fields: [serviceId], references: [id])
 
   @@index([masterId, startsAt])
   @@index([clientId, startsAt])

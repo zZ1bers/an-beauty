@@ -15,6 +15,7 @@ import {
   Scissors,
   Wallet,
   Clock3,
+  FileDown,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -37,11 +38,40 @@ import { useNavigate } from 'react-router-dom'
 import { useLang } from '../i18n/LanguageContext'
 import { useTheme } from '../theme/ThemeContext'
 import { useAuth } from '../auth/AuthContext'
-import { api, ApiError } from '../lib/api'
+import { api, apiDownload, ApiError } from '../lib/api'
+import { dayEnd, localDateTime, todayISO, toDateStr } from '../lib/datetime'
 import { Modal, confirmAction } from '../components/ui/Modal'
 import { useToast } from '../components/ui/Toast'
 import { ImageUpload } from '../components/ui/ImageUpload'
+import { DatePicker } from '../components/booking/DatePicker'
 import './Portal.css'
+
+function nextWorkingDate(workingDays: number[], from = new Date()) {
+  const start = new Date(from)
+  start.setHours(12, 0, 0, 0)
+  for (let i = 0; i < 28; i++) {
+    const d = new Date(start)
+    d.setDate(start.getDate() + i)
+    if (workingDays.includes(d.getDay())) return toDateStr(d)
+  }
+  return toDateStr(start)
+}
+
+function walkInBookingError(
+  message: string,
+  labels: {
+    closedDay: string
+    slotTaken: string
+    slotBlocked: string
+    outsideHours: string
+  },
+) {
+  if (message === 'DAY_OFF') return labels.closedDay
+  if (message === 'SLOT_TAKEN') return labels.slotTaken
+  if (message === 'SLOT_BLOCKED') return labels.slotBlocked
+  if (message === 'OUTSIDE_HOURS') return labels.outsideHours
+  return message
+}
 
 const CHART_BASE = {
   coral: '#E7717D',
@@ -148,7 +178,9 @@ type CategoryRow = {
 type BookingRow = {
   id: string
   client: string
-  clientId?: string
+  clientId?: string | null
+  isGuest?: boolean
+  guestPhone?: string | null
   date: string
   time: string
   startsAt?: string
@@ -157,6 +189,17 @@ type BookingRow = {
   price: number
   service: { id: string; categoryId?: string; name: { ru: string; de: string } }
   master: { id: string; name: string }
+}
+
+const emptyWalkIn = {
+  firstName: '',
+  lastName: '',
+  phone: '',
+  serviceId: '',
+  masterId: '',
+  date: '',
+  slot: '',
+  notes: '',
 }
 
 type ClientRow = {
@@ -246,8 +289,31 @@ const emptyPromo = {
   bodyRu: '',
   bodyDe: '',
   discountPct: 10,
+  startsAt: '',
+  endsAt: '',
   isActive: true,
   serviceIds: [] as string[],
+}
+
+function toDateInputValue(iso: string | null | undefined) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return toDateStr(d)
+}
+
+function promoPayload(form: typeof emptyPromo) {
+  return {
+    headlineRu: form.headlineRu,
+    headlineDe: form.headlineDe,
+    bodyRu: form.bodyRu,
+    bodyDe: form.bodyDe,
+    discountPct: form.discountPct,
+    isActive: form.isActive,
+    serviceIds: form.serviceIds,
+    startsAt: form.startsAt ? localDateTime(form.startsAt, '00:00').toISOString() : null,
+    endsAt: form.endsAt ? dayEnd(form.endsAt).toISOString() : null,
+  }
 }
 
 export function AdminPage() {
@@ -307,6 +373,18 @@ export function AdminPage() {
   const [clientCrm, setClientCrm] = useState({ crmNotes: '', allergies: '', preferences: '' })
 
   const [promoModal, setPromoModal] = useState<'create' | 'edit' | null>(null)
+  const [walkInModal, setWalkInModal] = useState(false)
+  const [walkInForm, setWalkInForm] = useState(emptyWalkIn)
+  const [walkInSlots, setWalkInSlots] = useState<string[]>([])
+  const [walkInDayOff, setWalkInDayOff] = useState(false)
+  const [walkInWorkingDays, setWalkInWorkingDays] = useState<number[] | undefined>(undefined)
+  const [walkInBusy, setWalkInBusy] = useState(false)
+
+  const now = new Date()
+  const [reportMonth, setReportMonth] = useState(
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+  )
+  const [reportBusy, setReportBusy] = useState(false)
   const [promoForm, setPromoForm] = useState(emptyPromo)
   const [editingPromoId, setEditingPromoId] = useState<string | null>(null)
 
@@ -660,6 +738,8 @@ export function AdminPage() {
       bodyRu: p.body.ru,
       bodyDe: p.body.de,
       discountPct: p.discountPct ?? 0,
+      startsAt: toDateInputValue(p.startsAt),
+      endsAt: toDateInputValue(p.endsAt),
       isActive: p.isActive,
       serviceIds: p.serviceIds,
     })
@@ -668,14 +748,19 @@ export function AdminPage() {
 
   const savePromo = async (e: FormEvent) => {
     e.preventDefault()
+    if (promoForm.startsAt && promoForm.endsAt && promoForm.endsAt < promoForm.startsAt) {
+      toast.push(t.admin.promoDateError, 'err')
+      return
+    }
     setSaving(true)
     try {
+      const body = promoPayload(promoForm)
       if (promoModal === 'create') {
-        await api('/admin/promos', { method: 'POST', body: JSON.stringify(promoForm) })
+        await api('/admin/promos', { method: 'POST', body: JSON.stringify(body) })
       } else if (editingPromoId) {
         await api(`/admin/promos/${editingPromoId}`, {
           method: 'PATCH',
-          body: JSON.stringify(promoForm),
+          body: JSON.stringify(body),
         })
       }
       setPromoModal(null)
@@ -715,6 +800,175 @@ export function AdminPage() {
     }))
   }
 
+  const openWalkIn = () => {
+    setWalkInForm({
+      ...emptyWalkIn,
+      date: todayISO(),
+      serviceId: services.find((s) => s.isActive)?.id ?? '',
+    })
+    setWalkInSlots([])
+    setWalkInDayOff(false)
+    setWalkInWorkingDays(undefined)
+    setWalkInModal(true)
+  }
+
+  const walkInMasters = useMemo(() => {
+    if (!walkInForm.serviceId) return masters.filter((m) => m.isActive)
+    return masters.filter((m) => m.isActive && m.specialties.includes(walkInForm.serviceId))
+  }, [masters, walkInForm.serviceId])
+
+  const walkInMaster = masters.find((m) => m.id === walkInForm.masterId)
+
+  useEffect(() => {
+    if (!walkInModal || !walkInForm.masterId) {
+      setWalkInWorkingDays(undefined)
+      return
+    }
+    let cancelled = false
+    void api<{ workingDays: number[] }>(`/masters/${walkInForm.masterId}/hours`, {
+      auth: false,
+    })
+      .then((r) => {
+        if (cancelled) return
+        setWalkInWorkingDays(r.workingDays)
+        const selected = new Date(`${walkInForm.date}T12:00:00`)
+        if (!r.workingDays.includes(selected.getDay())) {
+          setWalkInForm((prev) => ({
+            ...prev,
+            date: nextWorkingDate(r.workingDays),
+            slot: '',
+          }))
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setWalkInWorkingDays(undefined)
+      })
+    return () => {
+      cancelled = true
+    }
+    // Only re-fetch when master/modal changes — not on every date change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walkInModal, walkInForm.masterId])
+
+  useEffect(() => {
+    if (!walkInModal || !walkInForm.masterId || !walkInForm.serviceId || !walkInForm.date) {
+      setWalkInSlots([])
+      setWalkInDayOff(false)
+      return
+    }
+    if (walkInWorkingDays && !walkInWorkingDays.includes(new Date(`${walkInForm.date}T12:00:00`).getDay())) {
+      setWalkInSlots([])
+      setWalkInDayOff(true)
+      setWalkInForm((prev) => ({ ...prev, slot: '' }))
+      return
+    }
+    let cancelled = false
+    void api<{ slots: string[]; dayOff?: boolean }>(
+      `/masters/${walkInForm.masterId}/slots?date=${walkInForm.date}&serviceId=${walkInForm.serviceId}`,
+      { auth: false },
+    )
+      .then((r) => {
+        if (!cancelled) {
+          setWalkInSlots(r.slots)
+          setWalkInDayOff(!!r.dayOff)
+          setWalkInForm((prev) => ({
+            ...prev,
+            slot: r.slots.includes(prev.slot) ? prev.slot : '',
+          }))
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setWalkInSlots([])
+          setWalkInDayOff(false)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [
+    walkInModal,
+    walkInForm.masterId,
+    walkInForm.serviceId,
+    walkInForm.date,
+    walkInWorkingDays,
+  ])
+
+  const saveWalkIn = async () => {
+    if (
+      !walkInForm.firstName.trim() ||
+      !walkInForm.lastName.trim() ||
+      !walkInForm.serviceId ||
+      !walkInForm.masterId ||
+      !walkInForm.date ||
+      !walkInForm.slot
+    ) {
+      toast.push(t.admin.pickSlotFirst, 'err')
+      return
+    }
+    if (walkInDayOff) {
+      toast.push(t.admin.closedDay, 'err')
+      return
+    }
+    if (!walkInSlots.includes(walkInForm.slot)) {
+      toast.push(t.admin.slotTaken, 'err')
+      return
+    }
+    setWalkInBusy(true)
+    try {
+      const startsAt = localDateTime(walkInForm.date, walkInForm.slot).toISOString()
+      await api('/admin/bookings', {
+        method: 'POST',
+        body: JSON.stringify({
+          serviceId: walkInForm.serviceId,
+          masterId: walkInForm.masterId,
+          startsAt,
+          firstName: walkInForm.firstName.trim(),
+          lastName: walkInForm.lastName.trim(),
+          phone: walkInForm.phone.trim() || undefined,
+          notes: walkInForm.notes.trim() || undefined,
+        }),
+      })
+      toast.push(t.admin.bookingCreated)
+      setWalkInModal(false)
+      await load()
+    } catch (e) {
+      const msg =
+        e instanceof ApiError
+          ? walkInBookingError(e.message, {
+              closedDay: t.admin.closedDay,
+              slotTaken: t.admin.slotTaken,
+              slotBlocked: t.admin.slotBlocked,
+              outsideHours: t.admin.outsideHours,
+            })
+          : 'Error'
+      toast.push(msg, 'err')
+    } finally {
+      setWalkInBusy(false)
+    }
+  }
+
+  const downloadMonthReport = async () => {
+    const [y, m] = reportMonth.split('-').map(Number)
+    if (!y || !m) {
+      toast.push(t.admin.error, 'err')
+      return
+    }
+    setReportBusy(true)
+    try {
+      const filename = `an-beauty-${y}-${String(m).padStart(2, '0')}.pdf`
+      await apiDownload(
+        `/admin/reports/month.pdf?year=${y}&month=${m}&locale=${locale}`,
+        filename,
+      )
+      toast.push(t.admin.reportReady)
+    } catch (e) {
+      toast.push(e instanceof ApiError ? e.message : 'Error', 'err')
+    } finally {
+      setReportBusy(false)
+    }
+  }
+
   const addActions: Partial<Record<TabId, () => void>> = {
     staff: openCreateMaster,
     services: openCreateService,
@@ -723,6 +977,7 @@ export function AdminPage() {
       setCategoryModal(true)
     },
     promos: openCreatePromo,
+    bookings: openWalkIn,
   }
 
   return (
@@ -738,7 +993,7 @@ export function AdminPage() {
             {addActions[tab] && (
               <button className="btn btn-primary" onClick={addActions[tab]}>
                 <Plus size={16} />
-                {t.admin.add}
+                {tab === 'bookings' ? t.admin.bookWalkIn : t.admin.add}
               </button>
             )}
             <button
@@ -774,6 +1029,31 @@ export function AdminPage() {
           <AnimatePanel tab={tab}>
             {tab === 'stats' && stats && (
               <div className="admin__stats">
+                <div className="admin__report glass-strong">
+                  <div className="admin__report-copy">
+                    <strong>{t.admin.reportTitle}</strong>
+                    <span>{t.admin.reportHint}</span>
+                  </div>
+                  <div className="admin__report-actions">
+                    <label className="admin__report-month">
+                      <input
+                        type="month"
+                        value={reportMonth}
+                        onChange={(e) => setReportMonth(e.target.value)}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={reportBusy}
+                      onClick={() => void downloadMonthReport()}
+                    >
+                      <FileDown size={16} />
+                      {reportBusy ? t.admin.reportDownloading : t.admin.reportDownload}
+                    </button>
+                  </div>
+                </div>
+
                 <div className="admin__kpis">
                   {(
                     [
@@ -1226,10 +1506,16 @@ export function AdminPage() {
                     <div key={b.id} className="admin__row">
                       <div className="admin__booking-avatar">{b.client.slice(0, 1)}</div>
                       <div>
-                        <strong>{b.client}</strong>
+                        <strong>
+                          {b.client}
+                          {b.isGuest ? (
+                            <em className="admin__guest-tag"> · {t.admin.walkInGuest}</em>
+                          ) : null}
+                        </strong>
                         <span>
                           {b.service.name[locale]} · {b.master.name}
                           {b.price != null ? ` · €${b.price}` : ''}
+                          {b.isGuest && b.guestPhone ? ` · ${b.guestPhone}` : ''}
                         </span>
                       </div>
                       <em>
@@ -1296,6 +1582,11 @@ export function AdminPage() {
                     <div>
                       <strong>{p.headline[locale]}</strong>
                       <span>{p.body[locale]}</span>
+                      <span className="portal__hint">
+                        {p.startsAt || p.endsAt
+                          ? `${t.admin.promoPeriod}: ${toDateInputValue(p.startsAt) || '…'} → ${toDateInputValue(p.endsAt) || '…'}`
+                          : t.admin.promoNoPeriod}
+                      </span>
                     </div>
                     <em>
                       {p.discountPct ?? 0}% · {p.isActive ? 'on' : 'off'}
@@ -1692,6 +1983,147 @@ export function AdminPage() {
       </Modal>
 
       <Modal
+        open={walkInModal}
+        title={t.admin.walkInTitle}
+        onClose={() => setWalkInModal(false)}
+        wide
+      >
+        <form
+          className="admin__form"
+          onSubmit={(e) => {
+            e.preventDefault()
+            void saveWalkIn()
+          }}
+        >
+          <p className="portal__hint">{t.admin.walkInHint}</p>
+          <div className="admin__form-grid admin__form-grid--2">
+            <label>
+              {t.admin.firstName}
+              <input
+                required
+                value={walkInForm.firstName}
+                onChange={(e) => setWalkInForm({ ...walkInForm, firstName: e.target.value })}
+              />
+            </label>
+            <label>
+              {t.admin.lastName}
+              <input
+                required
+                value={walkInForm.lastName}
+                onChange={(e) => setWalkInForm({ ...walkInForm, lastName: e.target.value })}
+              />
+            </label>
+          </div>
+          <label>
+            {t.admin.phone}
+            <input
+              type="tel"
+              value={walkInForm.phone}
+              onChange={(e) => setWalkInForm({ ...walkInForm, phone: e.target.value })}
+            />
+          </label>
+          <label>
+            {t.admin.pickService}
+            <select
+              required
+              value={walkInForm.serviceId}
+              onChange={(e) => {
+                const serviceId = e.target.value
+                const allowed = masters.filter((m) => m.isActive && m.specialties.includes(serviceId))
+                setWalkInForm((prev) => ({
+                  ...prev,
+                  serviceId,
+                  masterId: allowed.some((m) => m.id === prev.masterId) ? prev.masterId : '',
+                  slot: '',
+                }))
+              }}
+            >
+              <option value="">—</option>
+              {services
+                .filter((s) => s.isActive)
+                .map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name[locale]}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label>
+            {t.admin.pickMaster}
+            <select
+              required
+              value={walkInForm.masterId}
+              onChange={(e) =>
+                setWalkInForm({ ...walkInForm, masterId: e.target.value, slot: '' })
+              }
+            >
+              <option value="">—</option>
+              {walkInMasters.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {walkInForm.masterId && walkInForm.serviceId ? (
+            <div className="admin__walkin-schedule">
+              <span>{t.admin.pickDate}</span>
+              <DatePicker
+                value={walkInForm.date}
+                onChange={(date) => setWalkInForm({ ...walkInForm, date, slot: '' })}
+                locale={locale}
+                calendarLabel={t.booking.calendar}
+                masterName={walkInMaster?.name}
+                withMasterLabel={t.booking.withMaster}
+                workingDays={walkInWorkingDays}
+                closedLabel={t.admin.closedDay}
+              />
+              <span>{t.admin.pickSlot}</span>
+              {walkInDayOff ? (
+                <p className="admin__slot-empty">{t.admin.closedDay}</p>
+              ) : walkInSlots.length === 0 ? (
+                <p className="admin__slot-empty">{t.admin.noSlots}</p>
+              ) : (
+                <div className="admin__slot-grid">
+                  {walkInSlots.map((time) => (
+                    <button
+                      key={time}
+                      type="button"
+                      className={`admin__slot ${walkInForm.slot === time ? 'is-selected' : ''}`}
+                      onClick={() => setWalkInForm({ ...walkInForm, slot: time })}
+                    >
+                      {time}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="portal__hint">{t.admin.pickServiceMaster}</p>
+          )}
+          <label>
+            {t.admin.bookingNotes}
+            <textarea
+              rows={2}
+              value={walkInForm.notes}
+              onChange={(e) => setWalkInForm({ ...walkInForm, notes: e.target.value })}
+            />
+          </label>
+          <div className="admin__form-actions">
+            <button type="button" className="btn btn-ghost" onClick={() => setWalkInModal(false)}>
+              {t.client.cancel}
+            </button>
+            <button
+              className="btn btn-primary"
+              disabled={walkInBusy || walkInDayOff || !walkInForm.slot}
+            >
+              {t.admin.bookWalkIn}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
         open={promoModal !== null}
         title={promoModal === 'create' ? t.admin.add : t.admin.edit}
         onClose={() => setPromoModal(null)}
@@ -1742,6 +2174,26 @@ export function AdminPage() {
               onChange={(e) => setPromoForm({ ...promoForm, discountPct: Number(e.target.value) })}
             />
           </label>
+          <div className="admin__form-grid admin__form-grid--2">
+            <label>
+              {t.admin.promoStarts}
+              <input
+                type="date"
+                value={promoForm.startsAt}
+                onChange={(e) => setPromoForm({ ...promoForm, startsAt: e.target.value })}
+              />
+            </label>
+            <label>
+              {t.admin.promoEnds}
+              <input
+                type="date"
+                value={promoForm.endsAt}
+                min={promoForm.startsAt || undefined}
+                onChange={(e) => setPromoForm({ ...promoForm, endsAt: e.target.value })}
+              />
+            </label>
+          </div>
+          <p className="portal__hint">{t.admin.promoPeriodHint}</p>
           <label className="admin__check">
             <input
               type="checkbox"

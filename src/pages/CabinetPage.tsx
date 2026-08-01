@@ -14,7 +14,7 @@ import {
 import { useLang } from '../i18n/LanguageContext'
 import { useAuth } from '../auth/AuthContext'
 import { api, ApiError } from '../lib/api'
-import { confirmAction } from '../components/ui/Modal'
+import { ConfirmDialog } from '../components/ui/Modal'
 import { useToast } from '../components/ui/Toast'
 import { Footer } from '../components/Footer'
 import { toDateStr, toTimeStr } from '../lib/datetime'
@@ -125,6 +125,8 @@ export function CabinetPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [cancelId, setCancelId] = useState<string | null>(null)
+  const [cancelBusy, setCancelBusy] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -178,14 +180,18 @@ export function CabinetPage() {
     [items],
   )
 
-  const cancel = async (id: string) => {
-    if (!confirmAction(t.client.confirmCancel)) return
+  const confirmCancel = async () => {
+    if (!cancelId) return
+    setCancelBusy(true)
     try {
-      await api(`/bookings/${id}/cancel`, { method: 'POST' })
+      await api(`/bookings/${cancelId}/cancel`, { method: 'POST' })
       toast.push(t.client.cancel)
+      setCancelId(null)
       await load()
     } catch (e) {
       toast.push(e instanceof ApiError ? e.message : 'Error', 'err')
+    } finally {
+      setCancelBusy(false)
     }
   }
 
@@ -334,7 +340,7 @@ export function CabinetPage() {
                               </button>
                               <button
                                 className="btn btn-ghost cabinet__cancel"
-                                onClick={() => void cancel(b.id)}
+                                onClick={() => setCancelId(b.id)}
                               >
                                 {t.client.cancel}
                               </button>
@@ -510,6 +516,17 @@ export function CabinetPage() {
         )}
       </div>
       </div>
+
+      <ConfirmDialog
+        open={cancelId !== null}
+        title={t.client.confirmCancelTitle}
+        body={t.client.confirmCancelBody}
+        confirmLabel={t.client.confirmCancelYes}
+        cancelLabel={t.client.confirmCancelNo}
+        busy={cancelBusy}
+        onClose={() => setCancelId(null)}
+        onConfirm={() => void confirmCancel()}
+      />
 
       <Footer />
     </main>

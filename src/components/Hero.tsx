@@ -52,27 +52,14 @@ export function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.55 }}
         >
-          {t.hero.title.split('\n').map((line) => (
-            <span key={line} className="hero__title-line">
-              {line}
-            </span>
-          ))}
-        </motion.p>
-
-        <motion.p
-          className="hero__sub"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.9, delay: 0.8 }}
-        >
-          {t.hero.subtitle}
+          {t.hero.title}
         </motion.p>
 
         <motion.div
           className="hero__cta"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 1 }}
+          transition={{ duration: 0.8, delay: 0.85 }}
         >
           <Link to="/booking" className="btn btn-primary">
             {t.hero.cta}

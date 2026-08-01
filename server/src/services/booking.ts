@@ -22,6 +22,13 @@ function dayBounds(dateStr: string) {
   return { start, end }
 }
 
+function dateStrLocal(d: Date) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export async function getAvailableSlots(masterId: string, dateStr: string, durationMin: number) {
   const day = new Date(`${dateStr}T12:00:00`)
   const dayOfWeek = day.getDay()
@@ -29,9 +36,10 @@ export async function getAvailableSlots(masterId: string, dateStr: string, durat
   const hours = await prisma.workingHours.findUnique({
     where: { masterId_dayOfWeek: { masterId, dayOfWeek } },
   })
-  if (!hours) return []
+  if (!hours) return { slots: [] as string[], dayOff: true }
 
   const { start: dayStart, end: dayEnd } = dayBounds(dateStr)
+  const now = new Date()
 
   const [bookings, timeOffs] = await Promise.all([
     prisma.booking.findMany({
@@ -58,6 +66,7 @@ export async function getAvailableSlots(masterId: string, dateStr: string, durat
   for (let t = workStart; t + durationMin <= workEnd; t += SLOT_STEP_MIN) {
     const slotStart = new Date(`${dateStr}T${fromMinutes(t)}:00`)
     const slotEnd = new Date(slotStart.getTime() + durationMin * 60_000)
+    if (slotStart <= now) continue
 
     const busy =
       bookings.some((b) => b.startsAt < slotEnd && b.endsAt > slotStart) ||
@@ -66,7 +75,7 @@ export async function getAvailableSlots(masterId: string, dateStr: string, durat
     if (!busy) slots.push(fromMinutes(t))
   }
 
-  return slots
+  return { slots, dayOff: false }
 }
 
 export async function resolveBookableSlot(input: {
@@ -98,8 +107,26 @@ export async function resolveBookableSlot(input: {
     throw err
   }
   const endsAt = new Date(input.startsAt.getTime() + service.durationMin * 60_000)
+  await assertWithinWorkingHours(input.masterId, input.startsAt, endsAt)
   await assertSlotFree(input.masterId, input.startsAt, endsAt)
   return { service, endsAt }
+}
+
+export async function assertWithinWorkingHours(masterId: string, startsAt: Date, endsAt: Date) {
+  const dayOfWeek = startsAt.getDay()
+  const hours = await prisma.workingHours.findUnique({
+    where: { masterId_dayOfWeek: { masterId, dayOfWeek } },
+  })
+  if (!hours) {
+    throw new Error('DAY_OFF')
+  }
+
+  const dateStr = dateStrLocal(startsAt)
+  const workStart = new Date(`${dateStr}T${fromMinutes(toMinutes(hours.startTime))}:00`)
+  const workEnd = new Date(`${dateStr}T${fromMinutes(toMinutes(hours.endTime))}:00`)
+  if (startsAt < workStart || endsAt > workEnd) {
+    throw new Error('OUTSIDE_HOURS')
+  }
 }
 
 export async function assertSlotFree(

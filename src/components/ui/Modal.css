@@ -56,6 +56,25 @@
   min-width: 0;
 }
 
+.confirm-dialog__body {
+  margin: 0 0 1.35rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  font-size: 0.98rem;
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.confirm-dialog__danger {
+  background: linear-gradient(135deg, #e7717d, #d45a67) !important;
+  border-color: transparent !important;
+}
+
 @media (max-width: 899px) {
   .modal-root {
     padding: max(0.85rem, env(safe-area-inset-top)) max(0.85rem, env(safe-area-inset-right))

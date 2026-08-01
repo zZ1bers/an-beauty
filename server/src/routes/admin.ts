@@ -4,12 +4,39 @@ import { BookingStatus, Role } from '@prisma/client'
 import { z } from 'zod'
 import { prisma } from '../db.js'
 import { requireRole } from '../plugins/auth.js'
-import { getAdminStats } from '../services/booking.js'
+import { getAdminStats, resolveBookableSlot } from '../services/booking.js'
+import { buildMonthlyReportPdf } from '../services/monthlyReport.js'
+import { resolvePromoPrice } from '../services/promo.js'
 
 export async function adminRoutes(app: FastifyInstance) {
   const adminOnly = { preHandler: requireRole(Role.ADMIN) }
 
   app.get('/admin/stats', adminOnly, async () => getAdminStats())
+
+  /** Monthly PDF for bookkeeping: clients, day-by-day appointments, totals */
+  app.get('/admin/reports/month.pdf', adminOnly, async (request, reply) => {
+    const q = z
+      .object({
+        year: z.coerce.number().int().min(2020).max(2100),
+        month: z.coerce.number().int().min(1).max(12),
+        locale: z.enum(['ru', 'de']).optional(),
+      })
+      .safeParse(request.query)
+    if (!q.success) {
+      return reply.status(400).send({ error: 'year and month required' })
+    }
+
+    const pdf = await buildMonthlyReportPdf({
+      year: q.data.year,
+      month: q.data.month,
+      locale: q.data.locale,
+    })
+    const filename = `an-beauty-${q.data.year}-${String(q.data.month).padStart(2, '0')}.pdf`
+    return reply
+      .header('Content-Type', 'application/pdf')
+      .header('Content-Disposition', `attachment; filename="${filename}"`)
+      .send(pdf)
+  })
 
   // ——— Clients (view only — no impersonation) ———
   app.get('/admin/clients', adminOnly, async () => {
@@ -466,26 +493,118 @@ export async function adminRoutes(app: FastifyInstance) {
       },
     })
 
-    return rows.map((b) => ({
-      id: b.id,
-      startsAt: b.startsAt.toISOString(),
-      date: b.startsAt.toISOString().slice(0, 10),
-      time: b.startsAt.toISOString().slice(11, 16),
-      status: b.status.toLowerCase(),
-      notes: b.notes,
-      price: Number(b.priceSnapshot),
-      client: `${b.client.user.firstName} ${b.client.user.lastName}`,
-      clientId: b.clientId,
+    return rows.map((b) => {
+      const clientName = b.client
+        ? `${b.client.user.firstName} ${b.client.user.lastName}`
+        : `${b.guestFirstName ?? ''} ${b.guestLastName ?? ''}`.trim() || 'Walk-in'
+      return {
+        id: b.id,
+        startsAt: b.startsAt.toISOString(),
+        date: b.startsAt.toISOString().slice(0, 10),
+        time: b.startsAt.toISOString().slice(11, 16),
+        status: b.status.toLowerCase(),
+        notes: b.notes,
+        price: Number(b.priceSnapshot),
+        client: clientName,
+        clientId: b.clientId,
+        isGuest: !b.clientId,
+        guestPhone: b.guestPhone,
+        service: {
+          id: b.service.id,
+          categoryId: b.service.categoryId,
+          name: { ru: b.service.nameRu, de: b.service.nameDe },
+        },
+        master: {
+          id: b.master.id,
+          name: `${b.master.user.firstName} ${b.master.user.lastName}`,
+        },
+      }
+    })
+  })
+
+  /** Walk-in booking: no client account — only name/phone + appointment */
+  app.post('/admin/bookings', adminOnly, async (request, reply) => {
+    const body = z
+      .object({
+        serviceId: z.string().min(1),
+        masterId: z.string().min(1),
+        startsAt: z.string().min(10),
+        firstName: z.string().min(1),
+        lastName: z.string().min(1),
+        phone: z.string().optional(),
+        notes: z.string().max(1000).optional(),
+      })
+      .safeParse(request.body)
+    if (!body.success) return reply.status(400).send({ error: 'Invalid body' })
+
+    const startsAt = new Date(body.data.startsAt)
+    let service
+    let endsAt: Date
+    try {
+      ;({ service, endsAt } = await resolveBookableSlot({
+        serviceId: body.data.serviceId,
+        masterId: body.data.masterId,
+        startsAt,
+      }))
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'SLOT_TAKEN'
+      if (msg === 'SERVICE_NOT_FOUND') return reply.status(404).send({ error: 'Service not found' })
+      if (msg === 'MASTER_SERVICE_MISMATCH') {
+        return reply.status(400).send({ error: 'Master does not offer this service' })
+      }
+      if (msg === 'INVALID_STARTS_AT') return reply.status(400).send({ error: 'Invalid startsAt' })
+      if (msg === 'DAY_OFF') return reply.status(409).send({ error: 'DAY_OFF' })
+      if (msg === 'OUTSIDE_HOURS') return reply.status(409).send({ error: 'OUTSIDE_HOURS' })
+      if (msg === 'SLOT_BLOCKED') return reply.status(409).send({ error: 'SLOT_BLOCKED' })
+      if (msg === 'SLOT_TAKEN') return reply.status(409).send({ error: 'SLOT_TAKEN' })
+      return reply.status(409).send({ error: msg })
+    }
+
+    const priced = await resolvePromoPrice(service.id, service.price)
+
+    const booking = await prisma.booking.create({
+      data: {
+        clientId: null,
+        masterId: body.data.masterId,
+        serviceId: service.id,
+        startsAt,
+        endsAt,
+        status: BookingStatus.CONFIRMED,
+        priceSnapshot: priced.price,
+        notes: body.data.notes?.trim() || null,
+        guestFirstName: body.data.firstName.trim(),
+        guestLastName: body.data.lastName.trim(),
+        guestPhone: body.data.phone?.trim() || null,
+        createdBy: request.user.id,
+      },
+      include: {
+        service: true,
+        master: { include: { user: { select: { firstName: true, lastName: true } } } },
+      },
+    })
+
+    return reply.status(201).send({
+      id: booking.id,
+      startsAt: booking.startsAt.toISOString(),
+      date: booking.startsAt.toISOString().slice(0, 10),
+      time: booking.startsAt.toISOString().slice(11, 16),
+      status: booking.status.toLowerCase(),
+      notes: booking.notes,
+      price: Number(booking.priceSnapshot),
+      client: `${booking.guestFirstName} ${booking.guestLastName}`,
+      clientId: null,
+      isGuest: true,
+      guestPhone: booking.guestPhone,
       service: {
-        id: b.service.id,
-        categoryId: b.service.categoryId,
-        name: { ru: b.service.nameRu, de: b.service.nameDe },
+        id: booking.service.id,
+        categoryId: booking.service.categoryId,
+        name: { ru: booking.service.nameRu, de: booking.service.nameDe },
       },
       master: {
-        id: b.master.id,
-        name: `${b.master.user.firstName} ${b.master.user.lastName}`,
+        id: booking.master.id,
+        name: `${booking.master.user.firstName} ${booking.master.user.lastName}`,
       },
-    }))
+    })
   })
 
   app.patch('/admin/bookings/:id', adminOnly, async (request, reply) => {
