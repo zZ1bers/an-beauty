@@ -3,10 +3,6 @@ import { useLang } from '../i18n/LanguageContext'
 import { Footer } from '../components/Footer'
 import './LegalPage.css'
 
-function Ph({ children }: { children: string }) {
-  return <mark className="legal__placeholder">{children}</mark>
-}
-
 export function DatenschutzPage() {
   const { locale } = useLang()
   const isRu = locale === 'ru'
@@ -25,35 +21,25 @@ export function DatenschutzPage() {
               : 'Informationen zur Verarbeitung personenbezogener Daten gemäß der Datenschutz-Grundverordnung (DSGVO) und dem Bundesdatenschutzgesetz (BDSG).'}
           </p>
 
-          {isRu && (
-            <p className="legal__note">
-              Полный юридический текст приведён на немецком языке ниже (как требуется для Германии). Русский заголовок — для удобства.
-            </p>
-          )}
-
           <h2>1. Verantwortlicher</h2>
-          <p>
-            Verantwortlicher im Sinne der DSGVO ist:
-          </p>
+          <p>Verantwortlicher im Sinne der DSGVO ist:</p>
           <p>
             AN.Beauty
             <br />
-            <Ph>[Vollständiger Name / Firmenname]</Ph>
+            Anait Havalian
             <br />
-            <Ph>[Straße und Hausnummer]</Ph>
+            Rückerstr. 4
             <br />
-            <Ph>[PLZ und Ort]</Ph>
+            90419 Nürnberg
             <br />
             Deutschland
             <br />
-            E-Mail: <Ph>[E-Mail-Adresse]</Ph>
+            E-Mail:{' '}
+            <a href="mailto:an.beauty0990@gmail.com">an.beauty0990@gmail.com</a>
             <br />
-            Telefon: <Ph>[Telefonnummer]</Ph>
+            Telefon: +49 173 2519021
           </p>
-          <p>
-            Sofern ein Datenschutzbeauftragter bestellt ist:{' '}
-            <Ph>[Name und Kontaktdaten des Datenschutzbeauftragten – falls vorhanden, sonst diesen Absatz entfernen]</Ph>
-          </p>
+          <p>Ein Datenschutzbeauftragter ist nicht bestellt.</p>
 
           <h2>2. Allgemeines zur Datenverarbeitung</h2>
           <p>
@@ -71,22 +57,14 @@ export function DatenschutzPage() {
 
           <h2>3. Hosting und Bereitstellung der Website</h2>
           <p>
-            Diese Website wird bei einem Hosting-Anbieter betrieben. Dabei können Verbindungsdaten (z. B. IP-Adresse,
-            Datum und Uhrzeit des Zugriffs, aufgerufene Seite, Browser-/Geräteinformationen) in Server-Logfiles
-            verarbeitet werden. Die Verarbeitung erfolgt zur technischen Bereitstellung und Absicherung der Website
-            (Art. 6 Abs. 1 lit. f DSGVO).
-          </p>
-          <p>
-            Hosting-Anbieter: <Ph>[Name des Hosters, z. B. Vercel / Hetzner / …]</Ph>
-            <br />
-            Weitere Informationen:{' '}
-            <Ph>[Link zur Datenschutzerklärung des Hosters]</Ph>
+            Diese Website wird auf einem Server in der Europäischen Union (VPS) betrieben. Dabei können
+            Verbindungsdaten (z. B. IP-Adresse, Datum und Uhrzeit des Zugriffs, aufgerufene Seite,
+            Browser-/Geräteinformationen) in Server-Logfiles verarbeitet werden. Die Verarbeitung erfolgt zur
+            technischen Bereitstellung und Absicherung der Website (Art. 6 Abs. 1 lit. f DSGVO).
           </p>
 
           <h2>4. Registrierung und Kundenkonto</h2>
-          <p>
-            Für die Nutzung des Kundenbereichs können Sie ein Konto anlegen. Dabei verarbeiten wir insbesondere:
-          </p>
+          <p>Für die Nutzung des Kundenbereichs können Sie ein Konto anlegen. Dabei verarbeiten wir insbesondere:</p>
           <ul>
             <li>Vor- und Nachname</li>
             <li>E-Mail-Adresse</li>
@@ -129,16 +107,18 @@ export function DatenschutzPage() {
           </p>
 
           <h2>8. Empfänger von Daten</h2>
-          <p>Personenbezogene Daten können – soweit erforderlich – an folgende Kategorien von Empfängern übermittelt werden:</p>
+          <p>
+            Personenbezogene Daten können – soweit erforderlich – an folgende Kategorien von Empfängern übermittelt
+            werden:
+          </p>
           <ul>
             <li>IT- und Hosting-Dienstleister (Auftragsverarbeitung gemäß Art. 28 DSGVO)</li>
             <li>Mitarbeiterinnen und Mitarbeiter, die mit der Termin- und Kundenbetreuung betraut sind</li>
             <li>Behörden, soweit eine gesetzliche Verpflichtung besteht</li>
           </ul>
           <p>
-            Eine Übermittlung in Drittländer außerhalb der EU/EWR erfolgt nur, wenn dies rechtlich zulässig ist
-            (z. B. Angemessenheitsbeschluss oder geeignete Garantien nach Art. 44 ff. DSGVO). Details:{' '}
-            <Ph>[Angaben zu etwaigen Drittlandtransfers – sonst: „Derzeit keine Übermittlung in unsichere Drittländer.“]</Ph>
+            Eine Übermittlung in Drittländer außerhalb der EU/EWR erfolgt derzeit nicht, sofern nicht gesetzlich
+            zulässig und erforderlich.
           </p>
 
           <h2>9. Speicherdauer</h2>
@@ -164,16 +144,25 @@ export function DatenschutzPage() {
           </ul>
           <p>
             Zur Ausübung Ihrer Rechte genügt eine formlose Mitteilung an:{' '}
-            <Ph>[E-Mail-Adresse für Datenschutzanfragen]</Ph>
+            <a href="mailto:an.beauty0990@gmail.com">an.beauty0990@gmail.com</a>
           </p>
 
           <h2>11. Beschwerderecht bei einer Aufsichtsbehörde</h2>
           <p>
             Sie haben das Recht, sich bei einer Datenschutz-Aufsichtsbehörde zu beschweren, insbesondere in dem
             Mitgliedstaat Ihres Aufenthaltsorts, Ihres Arbeitsplatzes oder des Orts des mutmaßlichen Verstoßes
-            (Art. 77 DSGVO). Für Deutschland zuständig ist in der Regel die Aufsichtsbehörde des Bundeslandes, in dem
-            der Verantwortliche seinen Sitz hat:{' '}
-            <Ph>[Zuständige Aufsichtsbehörde, z. B. Landesbeauftragte/r für Datenschutz …]</Ph>
+            (Art. 77 DSGVO). Für den Sitz in Bayern ist zuständig:
+          </p>
+          <p>
+            Bayerisches Landesamt für Datenschutzaufsicht (BayLDA)
+            <br />
+            Promenade 18
+            <br />
+            91522 Ansbach
+            <br />
+            <a href="https://www.lda.bayern.de" target="_blank" rel="noreferrer">
+              www.lda.bayern.de
+            </a>
           </p>
 
           <h2>12. Pflicht zur Bereitstellung von Daten</h2>
@@ -191,7 +180,7 @@ export function DatenschutzPage() {
 
           <h2>14. Aktualität dieser Erklärung</h2>
           <p>
-            Stand: Juli 2026. Wir behalten uns vor, diese Datenschutzerklärung anzupassen, damit sie stets den
+            Stand: August 2026. Wir behalten uns vor, diese Datenschutzerklärung anzupassen, damit sie stets den
             aktuellen rechtlichen Anforderungen sowie unseren Leistungen entspricht.
           </p>
 

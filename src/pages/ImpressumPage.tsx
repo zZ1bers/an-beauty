@@ -3,10 +3,6 @@ import { useLang } from '../i18n/LanguageContext'
 import { Footer } from '../components/Footer'
 import './LegalPage.css'
 
-function Ph({ children }: { children: string }) {
-  return <mark className="legal__placeholder">{children}</mark>
-}
-
 export function ImpressumPage() {
   const { locale } = useLang()
   const isRu = locale === 'ru'
@@ -19,91 +15,66 @@ export function ImpressumPage() {
           <h1 className="legal__title display">Impressum</h1>
           <p className="legal__lead">
             {isRu
-              ? 'Сведения согласно § 5 DDG (ранее TMG) и § 18 MStV. Поля в розовом — плейсхолдеры: подставьте свои данные.'
-              : 'Angaben gemäß § 5 DDG (ehemals TMG) und § 18 Abs. 2 MStV. Rosa markierte Felder bitte durch Ihre Angaben ersetzen.'}
-          </p>
-
-          <p className="legal__note">
-            {isRu
-              ? 'Пока заполнены только плейсхолдеры. Пришлите данные — подставим в текст.'
-              : 'Noch Platzhalter. Sobald Sie die finalen Angaben senden, ersetzen wir die Markierungen.'}
+              ? 'Сведения согласно § 5 DDG (ранее TMG) и § 18 Abs. 2 MStV.'
+              : 'Angaben gemäß § 5 DDG (ehemals TMG) und § 18 Abs. 2 MStV.'}
           </p>
 
           <h2>Angaben gemäß § 5 DDG</h2>
           <p>
             AN.Beauty
             <br />
-            <Ph>[Vollständiger Name der/des Inhaber:in bzw. Firmenname]</Ph>
+            Anait Havalian
             <br />
-            <Ph>[Rechtsform, z. B. Einzelunternehmen / GmbH / … – falls zutreffend]</Ph>
+            Einzelunternehmen
           </p>
 
           <h3>Anschrift</h3>
           <p>
-            <Ph>[Straße und Hausnummer]</Ph>
+            Rückerstr. 4
             <br />
-            <Ph>[PLZ und Ort]</Ph>
+            90419 Nürnberg
             <br />
             Deutschland
           </p>
 
           <h3>Kontakt</h3>
           <p>
-            Telefon: <Ph>[Telefonnummer]</Ph>
+            Telefon: +49 173 2519021
             <br />
-            E-Mail: <Ph>[E-Mail-Adresse]</Ph>
+            E-Mail:{' '}
+            <a href="mailto:an.beauty0990@gmail.com">an.beauty0990@gmail.com</a>
             <br />
-            Website: an.beauty
+            Website:{' '}
+            <a href="https://an-beauty.com" target="_blank" rel="noreferrer">
+              an-beauty.com
+            </a>
           </p>
 
-          <h2>Vertretung / Geschäftsführung</h2>
-          <p>
-            Vertretungsberechtigte Person(en):{' '}
-            <Ph>[Vor- und Nachname der vertretungsberechtigten Person(en)]</Ph>
-          </p>
-
-          <h2>Registereintrag</h2>
-          <p>
-            {isRu
-              ? 'Только если есть запись в торговом реестре (например, GmbH):'
-              : 'Nur ausfüllen, falls ein Handelsregistereintrag besteht (z. B. GmbH):'}
-          </p>
-          <p>
-            Registergericht: <Ph>[Amtsgericht …]</Ph>
-            <br />
-            Registernummer: <Ph>[HRB … / HRA …]</Ph>
-          </p>
-          <p>
-            {isRu
-              ? 'Если вы индивидуальный предприниматель без записи в реестре — этот блок можно удалить.'
-              : 'Bei Einzelunternehmen ohne Registereintrag kann dieser Abschnitt entfallen.'}
-          </p>
+          <h2>Vertretung</h2>
+          <p>Vertretungsberechtigte Person: Anait Havalian</p>
 
           <h2>Umsatzsteuer-ID</h2>
           <p>
-            Umsatzsteuer-Identifikationsnummer gemäß § 27a UStG:{' '}
-            <Ph>[DE… – falls vorhanden, sonst „Nicht vorhanden“ / Kleinunternehmer]</Ph>
+            Umsatzsteuer-Identifikationsnummer gemäß § 27a UStG: Nicht vorhanden
+            (Kleinunternehmerregelung gemäß § 19 UStG).
           </p>
 
           <h2>Berufsrechtliche Angaben</h2>
           <p>
-            {isRu
-              ? 'Если деятельность подлежит особым профессиональным правилам — укажите. Иначе можно оставить «не применяется».'
-              : 'Falls für Ihre Tätigkeit besondere berufsrechtliche Regelungen gelten, bitte ergänzen. Ansonsten: „Nicht einschlägig“.'}
-          </p>
-          <p>
-            Berufsbezeichnung: <Ph>[z. B. Kosmetiker:in – falls relevant]</Ph>
+            Berufsbezeichnung: Master-Maniküre
             <br />
-            Zuständige Kammer / Aufsicht: <Ph>[falls vorhanden]</Ph>
-            <br />
-            Verliehen in: <Ph>[Land / Ort]</Ph>
+            Verliehen in: Ukraine
           </p>
 
           <h2>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
           <p>
-            <Ph>[Vor- und Nachname]</Ph>
+            Anait Havalian
             <br />
-            <Ph>[Anschrift – in der Regel wie oben]</Ph>
+            Rückerstr. 4
+            <br />
+            90419 Nürnberg
+            <br />
+            Deutschland
           </p>
 
           <h2>EU-Streitschlichtung</h2>
@@ -119,7 +90,6 @@ export function ImpressumPage() {
           <p>
             Wir sind nicht verpflichtet und nicht bereit, an Streitbeilegungsverfahren vor einer
             Verbraucherschlichtungsstelle teilzunehmen.
-            {/* Wenn Sie teilnehmen: Text anpassen und Stelle nennen. */}
           </p>
 
           <h2>Haftung für Inhalte</h2>
