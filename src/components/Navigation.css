@@ -405,17 +405,20 @@
     border: none;
     margin: 0;
     padding: 0;
-    background: rgba(20, 16, 14, 0.55);
+    background: rgba(20, 16, 14, 0.5);
     cursor: pointer;
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
+    /* opacity only — no blur */
+    transition: opacity 0.22s ease, visibility 0s linear 0.22s;
   }
 
   .nav__mobile-backdrop.is-open {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
+    transition: opacity 0.22s ease, visibility 0s linear 0s;
   }
 
   .nav__mobile {
@@ -439,17 +442,29 @@
     border-left: 1px solid rgba(231, 113, 125, 0.22);
     overflow: hidden;
     background: var(--bg-elevated);
-    box-shadow: -12px 0 32px rgba(0, 0, 0, 0.22);
-    /* Instant open/close — animated slide felt like lag on phones */
-    transform: translate3d(110%, 0, 0);
+    /* GPU slide only — no Framer Motion, no backdrop-filter */
+    transform: translate3d(100%, 0, 0);
     visibility: hidden;
     pointer-events: none;
+    backface-visibility: hidden;
+    contain: layout paint;
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.28s;
   }
 
   .nav__mobile.is-open {
-    transform: none;
+    transform: translate3d(0, 0, 0);
     visibility: visible;
     pointer-events: auto;
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nav__mobile,
+    .nav__mobile.is-open,
+    .nav__mobile-backdrop,
+    .nav__mobile-backdrop.is-open {
+      transition: none;
+    }
   }
 
   .nav__mobile-top {
