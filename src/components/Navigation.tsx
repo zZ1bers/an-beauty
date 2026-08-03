@@ -1,6 +1,6 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { Menu, X, Globe, LogOut, Bell, Sun, Moon } from 'lucide-react'
-import { useCallback, useEffect, useState, type MouseEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
 import { useLang } from '../i18n/LanguageContext'
 import { useTheme } from '../theme/ThemeContext'
 import { useAuth, homeForRole } from '../auth/AuthContext'
@@ -26,6 +26,7 @@ export function Navigation() {
   const toast = useToast()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const ignoreNextClick = useRef(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const location = useLocation()
@@ -214,7 +215,20 @@ export function Navigation() {
           <button
             type="button"
             className="nav__burger"
-            onClick={() => setOpen((v) => !v)}
+            onPointerDown={(e) => {
+              // Open on touch-down so the menu doesn't wait for click after a heavy paint
+              if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+                ignoreNextClick.current = true
+                setOpen((v) => !v)
+              }
+            }}
+            onClick={() => {
+              if (ignoreNextClick.current) {
+                ignoreNextClick.current = false
+                return
+              }
+              setOpen((v) => !v)
+            }}
             aria-label="Menu"
             aria-expanded={open}
             aria-controls="nav-mobile-panel"

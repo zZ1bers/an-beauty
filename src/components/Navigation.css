@@ -390,6 +390,13 @@
     display: none;
   }
 
+  /* Solid nav bar on mobile — glass blur makes taps feel delayed */
+  .nav__inner.glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--bg-elevated);
+  }
+
   .nav__mobile-backdrop {
     display: block;
     position: fixed;
@@ -403,7 +410,6 @@
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transition: opacity 0.2s ease, visibility 0.2s ease;
   }
 
   .nav__mobile-backdrop.is-open {
@@ -434,14 +440,14 @@
     overflow: hidden;
     background: var(--bg-elevated);
     box-shadow: -12px 0 32px rgba(0, 0, 0, 0.22);
-    transform: translate3d(100%, 0, 0);
+    /* Instant open/close — animated slide felt like lag on phones */
+    transform: translate3d(110%, 0, 0);
     visibility: hidden;
     pointer-events: none;
-    transition: transform 0.22s ease, visibility 0.22s ease;
   }
 
   .nav__mobile.is-open {
-    transform: translate3d(0, 0, 0);
+    transform: none;
     visibility: visible;
     pointer-events: auto;
   }
