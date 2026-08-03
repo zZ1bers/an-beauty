@@ -46,7 +46,6 @@ export function LoginPage() {
           submit: mode === 'login' ? 'Войти' : 'Создать аккаунт',
           switchHint: mode === 'login' ? 'Нет аккаунта?' : 'Уже есть аккаунт?',
           switchAction: mode === 'login' ? 'Регистрация' : 'Войти',
-          demo: 'Демо: admin@an.beauty / admin123 · elena@an.beauty / master123 · you@an.beauty / client123',
           invalidCredentials: 'Неверный email или пароль',
           emailTaken: 'Этот email уже зарегистрирован',
           invalidBody: 'Проверьте заполненные поля',
@@ -63,7 +62,6 @@ export function LoginPage() {
           submit: mode === 'login' ? 'Einloggen' : 'Konto erstellen',
           switchHint: mode === 'login' ? 'Kein Konto?' : 'Bereits Konto?',
           switchAction: mode === 'login' ? 'Registrieren' : 'Anmelden',
-          demo: 'Demo: admin@an.beauty / admin123 · elena@an.beauty / master123 · you@an.beauty / client123',
           invalidCredentials: 'E-Mail oder Passwort ist falsch',
           emailTaken: 'Diese E-Mail ist bereits registriert',
           invalidBody: 'Bitte prüfen Sie die eingegebenen Felder',
@@ -177,7 +175,6 @@ export function LoginPage() {
           <span className="login__switch-action">{copy.switchAction}</span>
         </button>
 
-        <p className="login__demo">{copy.demo}</p>
         <div className="login__legal">
           <Link to="/impressum">Impressum</Link>
           <Link to="/datenschutz">Datenschutz</Link>

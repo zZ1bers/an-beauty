@@ -132,6 +132,22 @@ docker compose -f docker-compose.prod.yml --env-file .env exec \
   api npx prisma db seed
 ```
 
+### Сброс пароля админа (без очистки БД)
+
+Если логин не подходит, а данные уже есть — не делай seed, а обнови админа из `.env`:
+
+```bash
+cd /opt/an.beauty
+set -a && source .env && set +a
+docker compose -f docker-compose.prod.yml --env-file .env exec \
+  -e ADMIN_EMAIL="$ADMIN_EMAIL" \
+  -e ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+  api npm run db:ensure-admin
+```
+
+После этого вход: `ADMIN_EMAIL` / `ADMIN_PASSWORD` из `.env` на сервере  
+(не `admin123` — демо-пароли больше не создаются).
+
 Админ-панель: `https://YOUR_DOMAIN/x7Km2pQ9vR4nW8hL`
 
 ---

@@ -119,3 +119,27 @@ html[data-theme='light'] .ambient__grain {
     animation: none;
   }
 }
+
+/* Mobile: cut GPU cost (blur + animated orbs lag the whole page) */
+@media (max-width: 899px) {
+  .ambient__orb {
+    filter: blur(28px);
+    animation: none;
+    will-change: auto;
+    opacity: 0.28;
+  }
+
+  .ambient__orb--soft,
+  .ambient__orb--taupe,
+  .ambient__orb--green {
+    display: none;
+  }
+
+  .ambient__grain {
+    display: none;
+  }
+
+  .ambient__mesh {
+    opacity: 0.08;
+  }
+}

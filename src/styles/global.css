@@ -393,6 +393,14 @@ ol {
     var(--glass-shadow-strong);
 }
 
+@media (max-width: 899px) {
+  .glass,
+  .glass-strong {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
 .btn {
   display: inline-flex;
   align-items: center;

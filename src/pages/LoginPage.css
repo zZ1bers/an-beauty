@@ -145,13 +145,6 @@
   text-decoration-color: var(--coral-deep);
 }
 
-.login__demo {
-  margin: 0.5rem 0 0;
-  font-size: 0.72rem;
-  line-height: 1.45;
-  color: var(--text-dim);
-}
-
 .login__legal {
   display: flex;
   justify-content: center;

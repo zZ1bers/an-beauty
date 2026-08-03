@@ -1,5 +1,4 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, Globe, LogOut, Bell, Sun, Moon } from 'lucide-react'
 import { useCallback, useEffect, useState, type MouseEvent } from 'react'
 import { useLang } from '../i18n/LanguageContext'
@@ -213,6 +212,7 @@ export function Navigation() {
             </Link>
           )}
           <button
+            type="button"
             className="nav__burger"
             onClick={() => setOpen((v) => !v)}
             aria-label="Menu"
@@ -224,145 +224,125 @@ export function Navigation() {
         </div>
       </div>
 
-      <AnimatePresence>
-        {open && (
-          <>
-            <motion.button
-              type="button"
-              className="nav__mobile-backdrop"
-              aria-label="Close menu"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.28 }}
-              onClick={() => setOpen(false)}
-            />
-            <motion.aside
-              id="nav-mobile-panel"
-              className="nav__mobile"
-              role="dialog"
-              aria-modal="true"
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <div className="nav__mobile-glow" aria-hidden />
+      <button
+        type="button"
+        className={`nav__mobile-backdrop ${open ? 'is-open' : ''}`}
+        aria-label="Close menu"
+        tabIndex={open ? 0 : -1}
+        onClick={() => setOpen(false)}
+      />
+      <aside
+        id="nav-mobile-panel"
+        className={`nav__mobile ${open ? 'is-open' : ''}`}
+        role="dialog"
+        aria-modal={open}
+        aria-hidden={!open}
+      >
+        <div className="nav__mobile-top">
+          <Link to="/" className="nav__brand" onClick={() => setOpen(false)}>
+            <span className="nav__mark">AN</span>
+            <span className="nav__dot">.</span>
+            <span className="nav__name">Beauty</span>
+          </Link>
+          <button
+            type="button"
+            className="nav__burger"
+            onClick={() => setOpen(false)}
+            aria-label="Close menu"
+          >
+            <X size={22} />
+          </button>
+        </div>
 
-              <div className="nav__mobile-top">
-                <Link to="/" className="nav__brand" onClick={() => setOpen(false)}>
-                  <span className="nav__mark">AN</span>
-                  <span className="nav__dot">.</span>
-                  <span className="nav__name">Beauty</span>
+        <p className="nav__mobile-eyebrow eyebrow">{locale === 'ru' ? 'Навигация' : 'Navigation'}</p>
+
+        <nav className="nav__mobile-nav">
+          {links.map((l, i) =>
+            l.to.includes('#') ? (
+              <a
+                key={l.to}
+                href={l.to}
+                className="nav__mobile-link"
+                onClick={(e) => onHashNav(e, l.to)}
+              >
+                <span className="nav__mobile-index">0{i + 1}</span>
+                <span className="nav__mobile-label">{l.label}</span>
+              </a>
+            ) : (
+              <Link key={l.to} to={l.to} className="nav__mobile-link" onClick={() => onRouteNav(l.to)}>
+                <span className="nav__mobile-index">0{i + 1}</span>
+                <span className="nav__mobile-label">{l.label}</span>
+              </Link>
+            ),
+          )}
+        </nav>
+
+        <div className="nav__mobile-foot">
+          {isClient && (
+            <button
+              type="button"
+              className="nav__mobile-notify"
+              onClick={() => {
+                setOpen(false)
+                setDrawerOpen(true)
+              }}
+            >
+              <Bell size={18} />
+              {t.client.notifications}
+              {unread > 0 && <span className="nav__mobile-notify-count">{unread}</span>}
+            </button>
+          )}
+
+          <div className="nav__mobile-cta">
+            {user ? (
+              <>
+                <Link
+                  to={homeForRole(user.role)}
+                  className="btn btn-primary"
+                  onClick={() => setOpen(false)}
+                >
+                  {portalLabel}
                 </Link>
                 <button
                   type="button"
-                  className="nav__burger"
-                  onClick={() => setOpen(false)}
-                  aria-label="Close menu"
+                  className="btn btn-ghost"
+                  onClick={() => {
+                    setOpen(false)
+                    logout()
+                    navigate('/')
+                  }}
                 >
-                  <X size={22} />
+                  <LogOut size={16} />
+                  {t.admin.logout}
                 </button>
-              </div>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="btn btn-primary" onClick={() => setOpen(false)}>
+                  {locale === 'ru' ? 'Войти' : 'Login'}
+                </Link>
+                <Link
+                  to="/login"
+                  state={{ mode: 'register' }}
+                  className="btn btn-ghost"
+                  onClick={() => setOpen(false)}
+                >
+                  {locale === 'ru' ? 'Регистрация' : 'Registrieren'}
+                </Link>
+              </>
+            )}
+          </div>
 
-              <p className="nav__mobile-eyebrow eyebrow">{locale === 'ru' ? 'Навигация' : 'Navigation'}</p>
-
-              <nav className="nav__mobile-nav">
-                {links.map((l, i) => (
-                  <motion.div
-                    key={l.to}
-                    initial={{ opacity: 0, x: 28 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.05 + 0.045 * i, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                  >
-                    {l.to.includes('#') ? (
-                      <a
-                        href={l.to}
-                        className="nav__mobile-link"
-                        onClick={(e) => onHashNav(e, l.to)}
-                      >
-                        <span className="nav__mobile-index">0{i + 1}</span>
-                        <span className="nav__mobile-label">{l.label}</span>
-                      </a>
-                    ) : (
-                      <Link to={l.to} className="nav__mobile-link" onClick={() => onRouteNav(l.to)}>
-                        <span className="nav__mobile-index">0{i + 1}</span>
-                        <span className="nav__mobile-label">{l.label}</span>
-                      </Link>
-                    )}
-                  </motion.div>
-                ))}
-              </nav>
-
-              <div className="nav__mobile-foot">
-                {isClient && (
-                  <button
-                    type="button"
-                    className="nav__mobile-notify"
-                    onClick={() => {
-                      setOpen(false)
-                      setDrawerOpen(true)
-                    }}
-                  >
-                    <Bell size={18} />
-                    {t.client.notifications}
-                    {unread > 0 && <span className="nav__mobile-notify-count">{unread}</span>}
-                  </button>
-                )}
-
-                <div className="nav__mobile-cta">
-                  {user ? (
-                    <>
-                      <Link
-                        to={homeForRole(user.role)}
-                        className="btn btn-primary"
-                        onClick={() => setOpen(false)}
-                      >
-                        {portalLabel}
-                      </Link>
-                      <button
-                        type="button"
-                        className="btn btn-ghost"
-                        onClick={() => {
-                          setOpen(false)
-                          logout()
-                          navigate('/')
-                        }}
-                      >
-                        <LogOut size={16} />
-                        {t.admin.logout}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <Link to="/login" className="btn btn-primary" onClick={() => setOpen(false)}>
-                        {locale === 'ru' ? 'Войти' : 'Login'}
-                      </Link>
-                      <Link
-                        to="/login"
-                        state={{ mode: 'register' }}
-                        className="btn btn-ghost"
-                        onClick={() => setOpen(false)}
-                      >
-                        {locale === 'ru' ? 'Регистрация' : 'Registrieren'}
-                      </Link>
-                    </>
-                  )}
-                </div>
-
-                <div className="nav__mobile-legal">
-                  <Link to="/impressum" onClick={() => setOpen(false)}>
-                    {t.footer.impressum}
-                  </Link>
-                  <Link to="/datenschutz" onClick={() => setOpen(false)}>
-                    {t.footer.datenschutz}
-                  </Link>
-                </div>
-              </div>
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+          <div className="nav__mobile-legal">
+            <Link to="/impressum" onClick={() => setOpen(false)}>
+              {t.footer.impressum}
+            </Link>
+            <Link to="/datenschutz" onClick={() => setOpen(false)}>
+              {t.footer.datenschutz}
+            </Link>
+          </div>
+        </div>
+      </aside>
 
       {isClient && (
         <Drawer
