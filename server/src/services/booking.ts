@@ -1,9 +1,10 @@
 import { BookingStatus } from '@prisma/client'
 import { prisma } from '../db.js'
 
-const SLOT_STEP_MIN = 45
-const DAY_START = 9 * 60
-const DAY_END = 18 * 60
+/** Start times every 30 minutes; a longer service blocks consecutive slots via duration overlap */
+const SLOT_STEP_MIN = 30
+const DAY_START = 8 * 60 // 08:00
+const DAY_END = 19 * 60 + 30 // 19:30
 
 function toMinutes(hhmm: string) {
   const [h, m] = hhmm.split(':').map(Number)

@@ -191,10 +191,12 @@ export const masters: Master[] = [
   },
 ]
 
-export const timeSlots = [
-  '09:00', '09:45', '10:30', '11:15', '12:00',
-  '13:30', '14:15', '15:00', '15:45', '16:30', '17:15', '18:00',
-]
+export const timeSlots = Array.from({ length: 23 }, (_, i) => {
+  const total = 8 * 60 + i * 30
+  const h = Math.floor(total / 60)
+  const m = total % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+})
 
 export const bookings: Booking[] = [
   {

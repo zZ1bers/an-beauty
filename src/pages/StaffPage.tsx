@@ -54,21 +54,15 @@ const DAY_LABELS_RU = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
 const DAY_LABELS_DE = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 const HEAD_RU = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const HEAD_DE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
-const SLOT_TIMES = [
-  '09:00',
-  '09:45',
-  '10:30',
-  '11:15',
-  '12:00',
-  '13:30',
-  '14:15',
-  '15:00',
-  '15:45',
-  '16:30',
-  '17:15',
-]
+/** 08:00–19:00 start times (30 min cells; day ends 19:30) */
+const SLOT_TIMES = Array.from({ length: 23 }, (_, i) => {
+  const total = 8 * 60 + i * 30
+  const h = Math.floor(total / 60)
+  const m = total % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+})
 
-const SLOT_MIN = 45
+const SLOT_MIN = 30
 
 async function removeTimeOff(id: string) {
   await api(`/master/time-off/${id}/remove`, { method: 'POST', body: JSON.stringify({}) })
@@ -129,8 +123,8 @@ export function StaffPage() {
           const existing = s.workingHours.find((h) => h.dayOfWeek === dayOfWeek)
           return {
             dayOfWeek,
-            startTime: existing?.startTime ?? '09:00',
-            endTime: existing?.endTime ?? '18:00',
+            startTime: existing?.startTime ?? '08:00',
+            endTime: existing?.endTime ?? '19:30',
             enabled: !!existing,
           }
         }),
@@ -744,8 +738,8 @@ export function StaffPage() {
                 {WEEK_ORDER.map((dayOfWeek) => {
                   const h = hoursDraft.find((x) => x.dayOfWeek === dayOfWeek) ?? {
                     dayOfWeek,
-                    startTime: '09:00',
-                    endTime: '18:00',
+                    startTime: '08:00',
+                    endTime: '19:30',
                     enabled: false,
                   }
                   return (
@@ -762,8 +756,8 @@ export function StaffPage() {
                                   ...prev,
                                   {
                                     dayOfWeek,
-                                    startTime: '09:00',
-                                    endTime: '18:00',
+                                    startTime: '08:00',
+                                    endTime: '19:30',
                                     enabled: e.target.checked,
                                   },
                                 ]
