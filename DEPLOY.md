@@ -136,19 +136,23 @@ docker compose -f docker-compose.prod.yml --env-file .env exec \
 
 ### Почта для «Забыли пароль»
 
-В `/opt/an.beauty/.env` добавь (IONOS):
+На VPS одной командой дописывает блок SMTP в `.env` (если его ещё нет):
 
-```env
-FRONTEND_URL=https://an-beauty.com
-SMTP_HOST=smtp.ionos.de
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=info@an-beauty.com
-SMTP_PASS=пароль-от-ящика-info
-MAIL_FROM="AN.Beauty <info@an-beauty.com>"
+```bash
+cd /opt/an.beauty && git pull && bash scripts/ensure-smtp-env.sh
 ```
 
-Затем `docker compose -f docker-compose.prod.yml --env-file .env up -d --build api`.
+Потом открой файл и замени `CHANGE_ME` на пароль ящика `info@an-beauty.com`:
+
+```bash
+nano /opt/an.beauty/.env
+```
+
+Перезапуск API:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+```
 
 ### Прайс (категории и услуги)
 
