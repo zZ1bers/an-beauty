@@ -102,6 +102,8 @@ nano .env
 | `CORS_ORIGIN` | `https://anbeauty.example.com` |
 | `PUBLIC_URL` | `https://anbeauty.example.com/api` |
 | `ADMIN_*` | только для первого seed |
+| `FRONTEND_URL` | `https://an-beauty.com` (ссылки в письмах) |
+| `SMTP_*` / `MAIL_FROM` | почта для «Забыли пароль» (IONOS: smtp.ionos.de) |
 
 Файл `.env` **не коммить**.
 
@@ -131,6 +133,22 @@ docker compose -f docker-compose.prod.yml --env-file .env exec \
   -e NODE_ENV=production \
   api npx prisma db seed
 ```
+
+### Почта для «Забыли пароль»
+
+В `/opt/an.beauty/.env` добавь (IONOS):
+
+```env
+FRONTEND_URL=https://an-beauty.com
+SMTP_HOST=smtp.ionos.de
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=info@an-beauty.com
+SMTP_PASS=пароль-от-ящика-info
+MAIL_FROM="AN.Beauty <info@an-beauty.com>"
+```
+
+Затем `docker compose -f docker-compose.prod.yml --env-file .env up -d --build api`.
 
 ### Прайс (категории и услуги)
 

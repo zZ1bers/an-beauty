@@ -42,6 +42,11 @@ model User {
   phone        String?
   locale       Locale    @default(ru)
   isActive     Boolean   @default(true)
+  /// Hashed 6-digit password reset code
+  resetCodeHash      String?
+  resetCodeExpiresAt DateTime?
+  resetAttempts      Int       @default(0)
+  resetSentAt        DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 

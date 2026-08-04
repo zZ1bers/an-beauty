@@ -98,6 +98,36 @@
   font-size: 0.9rem;
 }
 
+.login__info {
+  margin: 0;
+  color: var(--green, #7AAD3A);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.login__forgot {
+  align-self: flex-end;
+  margin: -0.25rem 0 0;
+  padding: 0.25rem 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--coral);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.login__forgot:hover {
+  color: var(--coral-deep);
+}
+
+.login__forgot:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .login__switch {
   display: flex;
   align-items: center;
