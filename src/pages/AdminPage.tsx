@@ -144,7 +144,10 @@ type MasterRow = {
   specialties: string[]
   bookingsCount: number
   isActive: boolean
+  showOnHome: boolean
 }
+
+const MASTER_PLACEHOLDER = '/placeholder-master.svg'
 
 type ServiceRow = {
   id: string
@@ -251,7 +254,7 @@ type PromoRow = {
 
 const emptyMaster = {
   email: '',
-  password: 'master123',
+  password: '',
   firstName: '',
   lastName: '',
   roleRu: '',
@@ -259,6 +262,7 @@ const emptyMaster = {
   bioRu: '',
   bioDe: '',
   imageUrl: '',
+  showOnHome: true,
   specialtyIds: [] as string[],
 }
 
@@ -368,6 +372,7 @@ export function AdminPage() {
 
   const [categoryModal, setCategoryModal] = useState(false)
   const [categoryForm, setCategoryForm] = useState(emptyCategory)
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
 
   const [clientDetail, setClientDetail] = useState<ClientDetail | null>(null)
   const [clientCrm, setClientCrm] = useState({ crmNotes: '', allergies: '', preferences: '' })
@@ -579,6 +584,7 @@ export function AdminPage() {
       bioRu: m.bio.ru,
       bioDe: m.bio.de,
       imageUrl: m.image,
+      showOnHome: m.showOnHome,
       specialtyIds: m.specialties,
     })
     setMasterModal('edit')
@@ -601,6 +607,7 @@ export function AdminPage() {
             bioRu: masterForm.bioRu,
             bioDe: masterForm.bioDe,
             imageUrl: masterForm.imageUrl,
+            showOnHome: masterForm.showOnHome,
             specialtyIds: masterForm.specialtyIds,
           }),
         })
@@ -609,14 +616,62 @@ export function AdminPage() {
       toast.push(t.admin.save)
       await load()
     } catch (err) {
-      toast.push(err instanceof ApiError ? err.message : 'Error', 'err')
+      toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
     } finally {
       setSaving(false)
     }
   }
 
+  const deleteMaster = async (m: MasterRow) => {
+    if (!confirmAction(t.admin.confirmDelete)) return
+    try {
+      const res = await api<{ ok: boolean; soft?: boolean }>(`/admin/masters/${m.id}`, {
+        method: 'DELETE',
+      })
+      toast.push(res.soft ? t.admin.deactivated : t.admin.deleted)
+      await load()
+    } catch (err) {
+      toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
+    }
+  }
+
+  const restoreMaster = async (m: MasterRow) => {
+    try {
+      await api(`/admin/masters/${m.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isActive: true, showOnHome: true }),
+      })
+      toast.push(t.admin.restore)
+      await load()
+    } catch (err) {
+      toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
+    }
+  }
+
+  const softDelete = async (path: string) => {
+    if (!confirmAction(t.admin.confirmDelete)) return
+    try {
+      const res = await api<{ ok: boolean; soft?: boolean }>(path, { method: 'DELETE' })
+      toast.push(res.soft ? t.admin.deactivated : t.admin.deleted)
+      await load()
+    } catch (err) {
+      toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
+    }
+  }
+
+  const restoreEntity = async (path: string, body: Record<string, unknown> = { isActive: true }) => {
+    try {
+      await api(path, { method: 'PATCH', body: JSON.stringify(body) })
+      toast.push(t.admin.restore)
+      await load()
+    } catch (err) {
+      toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
+    }
+  }
+
   const openCreateService = () => {
-    setServiceForm({ ...emptyService, categoryId: categories[0]?.id ?? '' })
+    const activeCat = categories.find((c) => c.isActive)
+    setServiceForm({ ...emptyService, categoryId: activeCat?.id ?? categories[0]?.id ?? '' })
     setEditingServiceId(null)
     setServiceModal('create')
   }
@@ -656,23 +711,49 @@ export function AdminPage() {
       toast.push(t.admin.save)
       await load()
     } catch (err) {
-      toast.push(err instanceof ApiError ? err.message : 'Error', 'err')
+      toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
     } finally {
       setSaving(false)
     }
+  }
+
+  const openCreateCategory = () => {
+    setEditingCategoryId(null)
+    setCategoryForm(emptyCategory)
+    setCategoryModal(true)
+  }
+
+  const openEditCategory = (c: CategoryRow) => {
+    setEditingCategoryId(c.id)
+    setCategoryForm({
+      slug: c.slug,
+      icon: c.icon,
+      nameRu: c.nameRu,
+      nameDe: c.nameDe,
+    })
+    setCategoryModal(true)
   }
 
   const saveCategory = async (e: FormEvent) => {
     e.preventDefault()
     setSaving(true)
     try {
-      await api('/admin/categories', { method: 'POST', body: JSON.stringify(categoryForm) })
+      if (editingCategoryId) {
+        const { slug: _slug, ...patch } = categoryForm
+        await api(`/admin/categories/${editingCategoryId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(patch),
+        })
+      } else {
+        await api('/admin/categories', { method: 'POST', body: JSON.stringify(categoryForm) })
+      }
       setCategoryModal(false)
+      setEditingCategoryId(null)
       setCategoryForm(emptyCategory)
       toast.push(t.admin.save)
       await load()
     } catch (err) {
-      toast.push(err instanceof ApiError ? err.message : 'Error', 'err')
+      toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
     } finally {
       setSaving(false)
     }
@@ -688,7 +769,7 @@ export function AdminPage() {
         preferences: detail.preferences ?? '',
       })
     } catch (err) {
-      toast.push(err instanceof ApiError ? err.message : 'Error', 'err')
+      toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
     }
   }
 
@@ -705,7 +786,7 @@ export function AdminPage() {
       await load()
       await openClient(clientDetail.id)
     } catch (err) {
-      toast.push(err instanceof ApiError ? err.message : 'Error', 'err')
+      toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
     } finally {
       setSaving(false)
     }
@@ -720,7 +801,7 @@ export function AdminPage() {
       toast.push(t.admin.save)
       await load()
     } catch (err) {
-      toast.push(err instanceof ApiError ? err.message : 'Error', 'err')
+      toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
     }
   }
 
@@ -767,7 +848,7 @@ export function AdminPage() {
       toast.push(t.admin.save)
       await load()
     } catch (err) {
-      toast.push(err instanceof ApiError ? err.message : 'Error', 'err')
+      toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
     } finally {
       setSaving(false)
     }
@@ -941,7 +1022,7 @@ export function AdminPage() {
               slotBlocked: t.admin.slotBlocked,
               outsideHours: t.admin.outsideHours,
             })
-          : 'Error'
+          : t.admin.error
       toast.push(msg, 'err')
     } finally {
       setWalkInBusy(false)
@@ -963,7 +1044,7 @@ export function AdminPage() {
       )
       toast.push(t.admin.reportReady)
     } catch (e) {
-      toast.push(e instanceof ApiError ? e.message : 'Error', 'err')
+      toast.push(e instanceof ApiError ? e.message : t.admin.error, 'err')
     } finally {
       setReportBusy(false)
     }
@@ -972,10 +1053,7 @@ export function AdminPage() {
   const addActions: Partial<Record<TabId, () => void>> = {
     staff: openCreateMaster,
     services: openCreateService,
-    categories: () => {
-      setCategoryForm(emptyCategory)
-      setCategoryModal(true)
-    },
+    categories: openCreateCategory,
     promos: openCreatePromo,
     bookings: openWalkIn,
   }
@@ -985,7 +1063,7 @@ export function AdminPage() {
       <div className="portal__wrap">
         <header className="portal__head">
           <div>
-            <p className="eyebrow">CRM Control</p>
+            <p className="eyebrow">{t.admin.crmControl}</p>
             <h1 className="portal__title display">{t.admin.title}</h1>
             <p className="portal__sub">{t.admin.subtitle}</p>
           </div>
@@ -1326,31 +1404,33 @@ export function AdminPage() {
               <div className="admin__table glass-strong">
                 {masters.length === 0 && <p className="portal__empty">{t.admin.empty}</p>}
                 {masters.map((m) => (
-                  <div key={m.id} className="admin__row">
-                    <img src={m.image} alt="" />
+                  <div key={m.id} className={`admin__row ${!m.isActive ? 'is-inactive' : ''}`}>
+                    <img src={m.image || MASTER_PLACEHOLDER} alt="" />
                     <div>
                       <strong>
                         {m.name}
-                        {!m.isActive ? ' · off' : ''}
+                        {!m.isActive ? ` · ${t.admin.inactive}` : ''}
+                        {m.isActive && m.showOnHome ? ` · ${t.admin.onHome}` : ''}
                       </strong>
-                      <span>{m.role[locale]}</span>
+                      <span>{m.role[locale] || m.email}</span>
                     </div>
-                    <em>{m.bookingsCount} bookings</em>
+                    <em>
+                      {m.bookingsCount} {t.admin.bookingsCount}
+                    </em>
                     <div className="admin__row-actions">
-                      <button aria-label="edit" onClick={() => openEditMaster(m)}>
+                      {!m.isActive && (
+                        <button type="button" className="btn btn-ghost" onClick={() => void restoreMaster(m)}>
+                          {t.admin.restore}
+                        </button>
+                      )}
+                      <button aria-label={t.admin.edit} onClick={() => openEditMaster(m)}>
                         <Pencil size={15} />
                       </button>
-                      <button
-                        aria-label="delete"
-                        onClick={() => {
-                          if (!confirmAction(t.admin.confirmDelete)) return
-                          void api(`/admin/masters/${m.id}`, { method: 'DELETE' })
-                            .then(() => load())
-                            .then(() => toast.push(t.admin.delete))
-                        }}
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      {m.isActive && (
+                        <button aria-label={t.admin.delete} onClick={() => void deleteMaster(m)}>
+                          <Trash2 size={15} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1360,31 +1440,43 @@ export function AdminPage() {
             {tab === 'services' && (
               <div className="admin__table glass-strong">
                 {services.map((s) => (
-                  <div key={s.id} className="admin__row admin__row--service">
-                    <img src={s.image} alt="" />
+                  <div
+                    key={s.id}
+                    className={`admin__row admin__row--service ${!s.isActive ? 'is-inactive' : ''}`}
+                  >
+                    <img src={s.image || MASTER_PLACEHOLDER} alt="" />
                     <div>
-                      <strong>{s.name[locale]}</strong>
+                      <strong>
+                        {s.name[locale]}
+                        {!s.isActive ? ` · ${t.admin.inactive}` : ''}
+                        {s.isActive && s.featured ? ` · ${t.admin.featured}` : ''}
+                      </strong>
                       <span>
                         €{s.price} · {s.duration} min
-                        {s.featured ? ' · featured' : ''}
                       </span>
                     </div>
                     <em>€{s.price}</em>
                     <div className="admin__row-actions">
-                      <button aria-label="edit" onClick={() => openEditService(s)}>
+                      {!s.isActive && (
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          onClick={() => void restoreEntity(`/admin/services/${s.id}`)}
+                        >
+                          {t.admin.restore}
+                        </button>
+                      )}
+                      <button aria-label={t.admin.edit} onClick={() => openEditService(s)}>
                         <Pencil size={15} />
                       </button>
-                      <button
-                        aria-label="delete"
-                        onClick={() => {
-                          if (!confirmAction(t.admin.confirmDelete)) return
-                          void api(`/admin/services/${s.id}`, { method: 'DELETE' })
-                            .then(() => load())
-                            .then(() => toast.push(t.admin.delete))
-                        }}
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      {s.isActive && (
+                        <button
+                          aria-label={t.admin.delete}
+                          onClick={() => void softDelete(`/admin/services/${s.id}`)}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1394,21 +1486,43 @@ export function AdminPage() {
             {tab === 'categories' && (
               <div className="admin__cats">
                 {categories.map((c) => (
-                  <div key={c.id} className="admin__cat glass">
+                  <div key={c.id} className={`admin__cat glass ${!c.isActive ? 'is-inactive' : ''}`}>
                     <span>{c.icon}</span>
-                    <strong>{locale === 'ru' ? c.nameRu : c.nameDe}</strong>
-                    <button
-                      className="btn btn-ghost"
-                      style={{ justifySelf: 'start', padding: '0.35rem 0.7rem', fontSize: '0.72rem' }}
-                      onClick={() => {
-                        if (!confirmAction(t.admin.confirmDelete)) return
-                        void api(`/admin/categories/${c.id}`, { method: 'DELETE' })
-                          .then(() => load())
-                          .then(() => toast.push(t.admin.delete))
-                      }}
-                    >
-                      {t.admin.delete}
-                    </button>
+                    <strong>
+                      {locale === 'ru' ? c.nameRu : c.nameDe}
+                      {!c.isActive ? ` · ${t.admin.inactive}` : ''}
+                    </strong>
+                    <div className="admin__row-actions" style={{ justifySelf: 'start' }}>
+                      {!c.isActive ? (
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          style={{ padding: '0.35rem 0.7rem', fontSize: '0.72rem' }}
+                          onClick={() => void restoreEntity(`/admin/categories/${c.id}`)}
+                        >
+                          {t.admin.restore}
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            style={{ padding: '0.35rem 0.7rem', fontSize: '0.72rem' }}
+                            onClick={() => openEditCategory(c)}
+                          >
+                            {t.admin.edit}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            style={{ padding: '0.35rem 0.7rem', fontSize: '0.72rem' }}
+                            onClick={() => void softDelete(`/admin/categories/${c.id}`)}
+                          >
+                            {t.admin.delete}
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1458,19 +1572,22 @@ export function AdminPage() {
                       >
                         {t.admin.allMasters}
                       </button>
-                      {masters
-                        .filter((m) => m.isActive)
-                        .map((m) => (
+                      {masters.map((m) => (
                           <button
                             key={m.id}
                             type="button"
                             className={`admin__chip admin__chip--master ${masterFilter === m.id ? 'is-active' : ''}`}
                             onClick={() => setMasterFilter(m.id)}
                           >
-                            <img src={m.image} alt="" className="admin__chip-avatar" />
-                            {m.name.split(' ')[0]}
+                            <img
+                              src={m.image || MASTER_PLACEHOLDER}
+                              alt=""
+                              className="admin__chip-avatar"
+                            />
+                            {m.name.split(' ')[0] || m.email}
+                            {!m.isActive ? ` · ${t.admin.inactive}` : ''}
                           </button>
-                        ))}
+                      ))}
                     </div>
                   </div>
 
@@ -1484,9 +1601,7 @@ export function AdminPage() {
                       >
                         {t.admin.allCategories}
                       </button>
-                      {categories
-                        .filter((c) => c.isActive)
-                        .map((c) => (
+                      {categories.map((c) => (
                           <button
                             key={c.id}
                             type="button"
@@ -1495,8 +1610,9 @@ export function AdminPage() {
                           >
                             {c.icon ? <span className="admin__chip-icon">{c.icon}</span> : null}
                             {locale === 'de' ? c.nameDe : c.nameRu}
+                            {!c.isActive ? ` · ${t.admin.inactive}` : ''}
                           </button>
-                        ))}
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -1526,9 +1642,17 @@ export function AdminPage() {
                         value={b.status}
                         onChange={(e) => void setBookingStatus(b.id, e.target.value)}
                       >
-                        {['pending', 'confirmed', 'completed', 'cancelled', 'no_show'].map((s) => (
-                          <option key={s} value={s}>
-                            {s}
+                        {(
+                          [
+                            ['pending', t.admin.statusPending],
+                            ['confirmed', t.admin.statusConfirmed],
+                            ['completed', t.admin.statusCompleted],
+                            ['cancelled', t.admin.statusCancelled],
+                            ['no_show', t.admin.statusNoShow],
+                          ] as const
+                        ).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
                           </option>
                         ))}
                       </select>
@@ -1543,7 +1667,7 @@ export function AdminPage() {
                 <div className="admin__filters">
                   <input
                     type="search"
-                    placeholder="Search…"
+                    placeholder={t.admin.search}
                     value={clientSearch}
                     onChange={(e) => setClientSearch(e.target.value)}
                   />
@@ -1577,10 +1701,13 @@ export function AdminPage() {
             {tab === 'promos' && (
               <div className="admin__table glass-strong">
                 {promos.map((p) => (
-                  <div key={p.id} className="admin__row">
+                  <div key={p.id} className={`admin__row ${!p.isActive ? 'is-inactive' : ''}`}>
                     <div className="admin__booking-avatar">%</div>
                     <div>
-                      <strong>{p.headline[locale]}</strong>
+                      <strong>
+                        {p.headline[locale]}
+                        {!p.isActive ? ` · ${t.admin.inactive}` : ''}
+                      </strong>
                       <span>{p.body[locale]}</span>
                       <span className="portal__hint">
                         {p.startsAt || p.endsAt
@@ -1589,23 +1716,29 @@ export function AdminPage() {
                       </span>
                     </div>
                     <em>
-                      {p.discountPct ?? 0}% · {p.isActive ? 'on' : 'off'}
+                      {p.discountPct ?? 0}% · {p.isActive ? t.admin.statusOn : t.admin.statusOff}
                     </em>
                     <div className="admin__row-actions">
-                      <button aria-label="edit" onClick={() => openEditPromo(p)}>
+                      {!p.isActive && (
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          onClick={() => void restoreEntity(`/admin/promos/${p.id}`)}
+                        >
+                          {t.admin.restore}
+                        </button>
+                      )}
+                      <button aria-label={t.admin.edit} onClick={() => openEditPromo(p)}>
                         <Pencil size={15} />
                       </button>
-                      <button
-                        aria-label="delete"
-                        onClick={() => {
-                          if (!confirmAction(t.admin.confirmDelete)) return
-                          void api(`/admin/promos/${p.id}`, { method: 'DELETE' })
-                            .then(() => load())
-                            .then(() => toast.push(t.admin.delete))
-                        }}
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      {p.isActive && (
+                        <button
+                          aria-label={t.admin.delete}
+                          onClick={() => void softDelete(`/admin/promos/${p.id}`)}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1622,19 +1755,18 @@ export function AdminPage() {
         wide
       >
         <form className="admin__form" onSubmit={saveMaster}>
+          {masterModal === 'create' && <p className="portal__hint">{t.admin.optionalHint}</p>}
           <div className="admin__form-grid">
             <label>
-              First name
+              {t.admin.firstName}
               <input
-                required
                 value={masterForm.firstName}
                 onChange={(e) => setMasterForm({ ...masterForm, firstName: e.target.value })}
               />
             </label>
             <label>
-              Last name
+              {t.admin.lastName}
               <input
-                required
                 value={masterForm.lastName}
                 onChange={(e) => setMasterForm({ ...masterForm, lastName: e.target.value })}
               />
@@ -1642,7 +1774,7 @@ export function AdminPage() {
             {masterModal === 'create' && (
               <>
                 <label>
-                  Email
+                  {t.admin.email}
                   <input
                     type="email"
                     required
@@ -1651,7 +1783,7 @@ export function AdminPage() {
                   />
                 </label>
                 <label>
-                  Password
+                  {t.admin.password}
                   <input
                     type="password"
                     required
@@ -1663,49 +1795,61 @@ export function AdminPage() {
               </>
             )}
             <label>
-              Role RU
+              {t.admin.roleRu}
               <input
-                required
                 value={masterForm.roleRu}
                 onChange={(e) => setMasterForm({ ...masterForm, roleRu: e.target.value })}
               />
             </label>
             <label>
-              Role DE
+              {t.admin.roleDe}
               <input
-                required
                 value={masterForm.roleDe}
                 onChange={(e) => setMasterForm({ ...masterForm, roleDe: e.target.value })}
               />
             </label>
           </div>
           <label>
-            Bio RU
+            {t.admin.bioRu}
             <textarea
               rows={2}
-              required
               value={masterForm.bioRu}
               onChange={(e) => setMasterForm({ ...masterForm, bioRu: e.target.value })}
             />
           </label>
           <label>
-            Bio DE
+            {t.admin.bioDe}
             <textarea
               rows={2}
-              required
               value={masterForm.bioDe}
               onChange={(e) => setMasterForm({ ...masterForm, bioDe: e.target.value })}
             />
           </label>
           <ImageUpload
-            label={locale === 'ru' ? 'Фото' : 'Foto'}
+            label={t.admin.photoOptional}
             value={masterForm.imageUrl}
             onChange={(url) => setMasterForm({ ...masterForm, imageUrl: url })}
           />
+          <label className="admin__check" style={{ alignItems: 'flex-start', textTransform: 'none', letterSpacing: 0 }}>
+            <input
+              type="checkbox"
+              checked={masterForm.showOnHome}
+              onChange={(e) => setMasterForm({ ...masterForm, showOnHome: e.target.checked })}
+            />
+            <span>
+              <strong>{t.admin.showOnHome}</strong>
+              <br />
+              <em style={{ fontStyle: 'normal', opacity: 0.75, fontSize: '0.8rem' }}>
+                {t.admin.showOnHomeHint}
+              </em>
+            </span>
+          </label>
           <div>
             <p className="eyebrow">{t.admin.services}</p>
             <div className="admin__checkboxes">
-              {services.map((s) => (
+              {services
+                .filter((s) => s.isActive || masterForm.specialtyIds.includes(s.id))
+                .map((s) => (
                 <label key={s.id} className="admin__check">
                   <input
                     type="checkbox"
@@ -1713,15 +1857,16 @@ export function AdminPage() {
                     onChange={() => toggleSpecialty(s.id)}
                   />
                   {s.name[locale]}
+                  {!s.isActive ? ` (${t.admin.inactive})` : ''}
                 </label>
               ))}
             </div>
           </div>
           <div className="admin__form-actions">
             <button type="button" className="btn btn-ghost" onClick={() => setMasterModal(null)}>
-              Cancel
+              {t.admin.cancel}
             </button>
-            <button className="btn btn-primary" disabled={saving || !masterForm.imageUrl}>
+            <button className="btn btn-primary" disabled={saving}>
               {t.admin.save}
             </button>
           </div>
@@ -1737,22 +1882,25 @@ export function AdminPage() {
         <form className="admin__form" onSubmit={saveService}>
           <div className="admin__form-grid">
             <label>
-              Category
+              {t.admin.category}
               <select
                 required
                 value={serviceForm.categoryId}
                 onChange={(e) => setServiceForm({ ...serviceForm, categoryId: e.target.value })}
               >
-                {categories.map((c) => (
+                {categories
+                  .filter((c) => c.isActive || c.id === serviceForm.categoryId)
+                  .map((c) => (
                   <option key={c.id} value={c.id}>
                     {locale === 'ru' ? c.nameRu : c.nameDe}
+                    {!c.isActive ? ` (${t.admin.inactive})` : ''}
                   </option>
                 ))}
               </select>
             </label>
             {serviceModal === 'create' && (
               <label>
-                Slug
+                {t.admin.slug}
                 <input
                   required
                   value={serviceForm.slug}
@@ -1761,23 +1909,21 @@ export function AdminPage() {
               </label>
             )}
             <label>
-              Name RU
+              {t.admin.nameRu}
               <input
-                required
                 value={serviceForm.nameRu}
                 onChange={(e) => setServiceForm({ ...serviceForm, nameRu: e.target.value })}
               />
             </label>
             <label>
-              Name DE
+              {t.admin.nameDe}
               <input
-                required
                 value={serviceForm.nameDe}
                 onChange={(e) => setServiceForm({ ...serviceForm, nameDe: e.target.value })}
               />
             </label>
             <label>
-              Price €
+              {t.admin.priceEuro}
               <input
                 type="number"
                 required
@@ -1786,7 +1932,7 @@ export function AdminPage() {
               />
             </label>
             <label>
-              Duration min
+              {t.admin.durationMin}
               <input
                 type="number"
                 required
@@ -1798,25 +1944,23 @@ export function AdminPage() {
             </label>
           </div>
           <label>
-            Description RU
+            {t.admin.descriptionRu}
             <textarea
               rows={2}
-              required
               value={serviceForm.descriptionRu}
               onChange={(e) => setServiceForm({ ...serviceForm, descriptionRu: e.target.value })}
             />
           </label>
           <label>
-            Description DE
+            {t.admin.descriptionDe}
             <textarea
               rows={2}
-              required
               value={serviceForm.descriptionDe}
               onChange={(e) => setServiceForm({ ...serviceForm, descriptionDe: e.target.value })}
             />
           </label>
           <ImageUpload
-            label={locale === 'ru' ? 'Фото услуги' : 'Leistungsfoto'}
+            label={t.admin.photoOptional}
             value={serviceForm.imageUrl}
             onChange={(url) => setServiceForm({ ...serviceForm, imageUrl: url })}
           />
@@ -1827,19 +1971,19 @@ export function AdminPage() {
               onChange={(e) => setServiceForm({ ...serviceForm, featured: e.target.checked })}
             />
             <span>
-              <strong>{locale === 'ru' ? 'Featured — на главной' : 'Featured — auf Startseite'}</strong>
+              <strong>{t.admin.featured}</strong>
               <br />
               <em style={{ fontStyle: 'normal', opacity: 0.75, fontSize: '0.8rem' }}>
-                {locale === 'ru'
-                  ? 'Показывать эту услугу в блоке «Ритуалы красоты» на лендинге'
-                  : 'Diese Leistung im Block „Schönheitsrituale“ auf der Startseite zeigen'}
+                {t.admin.featuredHint}
               </em>
             </span>
           </label>
           <div>
             <p className="eyebrow">{t.admin.mastersForService}</p>
             <div className="admin__checkboxes">
-              {masters.map((m) => (
+              {masters
+                .filter((m) => m.isActive)
+                .map((m) => (
                 <label key={m.id} className="admin__check">
                   <input
                     type="checkbox"
@@ -1853,35 +1997,43 @@ export function AdminPage() {
           </div>
           <div className="admin__form-actions">
             <button type="button" className="btn btn-ghost" onClick={() => setServiceModal(null)}>
-              Cancel
+              {t.admin.cancel}
             </button>
-            <button className="btn btn-primary" disabled={saving || !serviceForm.imageUrl}>
+            <button className="btn btn-primary" disabled={saving}>
               {t.admin.save}
             </button>
           </div>
         </form>
       </Modal>
 
-      <Modal open={categoryModal} title={t.admin.add} onClose={() => setCategoryModal(false)}>
+      <Modal
+        open={categoryModal}
+        title={editingCategoryId ? t.admin.edit : t.admin.add}
+        onClose={() => {
+          setCategoryModal(false)
+          setEditingCategoryId(null)
+        }}
+      >
         <form className="admin__form" onSubmit={saveCategory}>
+          {!editingCategoryId && (
           <label>
-            Slug
+            {t.admin.slug}
             <input
               required
               value={categoryForm.slug}
               onChange={(e) => setCategoryForm({ ...categoryForm, slug: e.target.value })}
             />
           </label>
+          )}
           <label>
-            Icon
+            {t.admin.icon}
             <input
-              required
               value={categoryForm.icon}
               onChange={(e) => setCategoryForm({ ...categoryForm, icon: e.target.value })}
             />
           </label>
           <label>
-            Name RU
+            {t.admin.nameRu}
             <input
               required
               value={categoryForm.nameRu}
@@ -1889,7 +2041,7 @@ export function AdminPage() {
             />
           </label>
           <label>
-            Name DE
+            {t.admin.nameDe}
             <input
               required
               value={categoryForm.nameDe}
@@ -1897,6 +2049,16 @@ export function AdminPage() {
             />
           </label>
           <div className="admin__form-actions">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                setCategoryModal(false)
+                setEditingCategoryId(null)
+              }}
+            >
+              {t.admin.cancel}
+            </button>
             <button className="btn btn-primary" disabled={saving}>
               {t.admin.save}
             </button>
@@ -1919,12 +2081,13 @@ export function AdminPage() {
               <span>{clientDetail.email}</span>
               <span>{clientDetail.phone || '—'}</span>
               <span>
-                {clientDetail.totalVisits} visits · €{clientDetail.totalSpent}
+                {clientDetail.totalVisits} {t.admin.visitsSpent}
+                {clientDetail.totalSpent}
               </span>
             </div>
             <form className="admin__form" onSubmit={saveClientCrm}>
               <label>
-                CRM notes
+                {t.admin.crmNotes}
                 <textarea
                   rows={2}
                   value={clientCrm.crmNotes}
@@ -1932,14 +2095,14 @@ export function AdminPage() {
                 />
               </label>
               <label>
-                Allergies
+                {t.admin.allergies}
                 <input
                   value={clientCrm.allergies}
                   onChange={(e) => setClientCrm({ ...clientCrm, allergies: e.target.value })}
                 />
               </label>
               <label>
-                Preferences
+                {t.admin.preferences}
                 <input
                   value={clientCrm.preferences}
                   onChange={(e) => setClientCrm({ ...clientCrm, preferences: e.target.value })}
@@ -2132,7 +2295,7 @@ export function AdminPage() {
         <form className="admin__form" onSubmit={savePromo}>
           <div className="admin__form-grid">
             <label>
-              Headline RU
+              {t.admin.headlineRu}
               <input
                 required
                 value={promoForm.headlineRu}
@@ -2140,7 +2303,7 @@ export function AdminPage() {
               />
             </label>
             <label>
-              Headline DE
+              {t.admin.headlineDe}
               <input
                 required
                 value={promoForm.headlineDe}
@@ -2149,7 +2312,7 @@ export function AdminPage() {
             </label>
           </div>
           <label>
-            Body RU
+            {t.admin.bodyRu}
             <textarea
               rows={2}
               required
@@ -2158,7 +2321,7 @@ export function AdminPage() {
             />
           </label>
           <label>
-            Body DE
+            {t.admin.bodyDe}
             <textarea
               rows={2}
               required
@@ -2167,7 +2330,7 @@ export function AdminPage() {
             />
           </label>
           <label>
-            Discount %
+            {t.admin.discountPct}
             <input
               type="number"
               value={promoForm.discountPct}
@@ -2200,10 +2363,12 @@ export function AdminPage() {
               checked={promoForm.isActive}
               onChange={(e) => setPromoForm({ ...promoForm, isActive: e.target.checked })}
             />
-            Active
+            {t.admin.promoActive}
           </label>
           <div className="admin__checkboxes">
-            {services.map((s) => (
+            {services
+              .filter((s) => s.isActive || promoForm.serviceIds.includes(s.id))
+              .map((s) => (
               <label key={s.id} className="admin__check">
                 <input
                   type="checkbox"
@@ -2211,10 +2376,14 @@ export function AdminPage() {
                   onChange={() => togglePromoService(s.id)}
                 />
                 {s.name[locale]}
+                {!s.isActive ? ` (${t.admin.inactive})` : ''}
               </label>
             ))}
           </div>
           <div className="admin__form-actions">
+            <button type="button" className="btn btn-ghost" onClick={() => setPromoModal(null)}>
+              {t.admin.cancel}
+            </button>
             <button className="btn btn-primary" disabled={saving}>
               {t.admin.save}
             </button>

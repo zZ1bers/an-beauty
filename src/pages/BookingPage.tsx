@@ -453,7 +453,11 @@ export function BookingPage() {
                               className={`booking__chip booking__chip--master ${browseMasterId === m.id ? 'is-active' : ''}`}
                               onClick={() => setBrowseMasterId(m.id)}
                             >
-                              <img src={m.image} alt="" className="booking__chip-avatar" />
+                              <img
+                                src={m.image || '/placeholder-master.svg'}
+                                alt=""
+                                className="booking__chip-avatar"
+                              />
                               {m.name.split(' ')[0]}
                             </button>
                           ))}
@@ -496,7 +500,7 @@ export function BookingPage() {
                       className={`booking__master ${masterId === m.id ? 'is-selected' : ''}`}
                       onClick={() => pickMaster(m.id)}
                     >
-                      <img src={m.image} alt={m.name} />
+                      <img src={m.image || '/placeholder-master.svg'} alt={m.name} />
                       <div>
                         <strong className="serif">{m.name}</strong>
                         <span>{m.role[locale]}</span>

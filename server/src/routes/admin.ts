@@ -169,15 +169,22 @@ export async function adminRoutes(app: FastifyInstance) {
     const body = z
       .object({
         slug: z.string().min(1),
-        icon: z.string(),
+        icon: z.string().optional().default('✨'),
         nameRu: z.string(),
         nameDe: z.string(),
         sortOrder: z.number().optional(),
       })
       .safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: 'Invalid body' })
-    const row = await prisma.serviceCategory.create({ data: body.data })
-    return reply.status(201).send(row)
+    try {
+      const row = await prisma.serviceCategory.create({ data: body.data })
+      return reply.status(201).send(row)
+    } catch (e: unknown) {
+      if (typeof e === 'object' && e && 'code' in e && (e as { code: string }).code === 'P2002') {
+        return reply.status(409).send({ error: 'Slug already exists' })
+      }
+      throw e
+    }
   })
 
   app.patch('/admin/categories/:id', adminOnly, async (request, reply) => {
@@ -201,8 +208,12 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.delete('/admin/categories/:id', adminOnly, async (request, reply) => {
     const { id } = request.params as { id: string }
-    await prisma.serviceCategory.update({ where: { id }, data: { isActive: false } })
-    return { ok: true }
+    try {
+      await prisma.serviceCategory.update({ where: { id }, data: { isActive: false } })
+      return { ok: true, soft: true }
+    } catch {
+      return reply.status(404).send({ error: 'Not found' })
+    }
   })
 
   // ——— Services ———
@@ -227,13 +238,13 @@ export async function adminRoutes(app: FastifyInstance) {
       .object({
         categoryId: z.string(),
         slug: z.string().min(1),
-        nameRu: z.string(),
-        nameDe: z.string(),
-        descriptionRu: z.string(),
-        descriptionDe: z.string(),
+        nameRu: z.string().optional().default(''),
+        nameDe: z.string().optional().default(''),
+        descriptionRu: z.string().optional().default(''),
+        descriptionDe: z.string().optional().default(''),
         price: z.number(),
         durationMin: z.number().int().positive(),
-        imageUrl: z.string().min(1),
+        imageUrl: z.string().optional().default(''),
         featured: z.boolean().optional(),
         sortOrder: z.number().optional(),
         masterIds: z.array(z.string()).optional(),
@@ -241,20 +252,29 @@ export async function adminRoutes(app: FastifyInstance) {
       .safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: 'Invalid body' })
     const { masterIds, ...data } = body.data
-    const row = await prisma.service.create({
-      data: {
-        ...data,
-        masters: masterIds?.length
-          ? { create: masterIds.map((masterId) => ({ masterId })) }
-          : undefined,
-      },
-      include: { masters: true },
-    })
-    return reply.status(201).send({
-      ...row,
-      price: Number(row.price),
-      masterIds: row.masters.map((m) => m.masterId),
-    })
+    try {
+      const row = await prisma.service.create({
+        data: {
+          ...data,
+          nameRu: data.nameRu.trim() || data.slug,
+          nameDe: data.nameDe.trim() || data.slug,
+          masters: masterIds?.length
+            ? { create: masterIds.map((masterId) => ({ masterId })) }
+            : undefined,
+        },
+        include: { masters: true },
+      })
+      return reply.status(201).send({
+        ...row,
+        price: Number(row.price),
+        masterIds: row.masters.map((m) => m.masterId),
+      })
+    } catch (e: unknown) {
+      if (typeof e === 'object' && e && 'code' in e && (e as { code: string }).code === 'P2002') {
+        return reply.status(409).send({ error: 'Slug already exists' })
+      }
+      throw e
+    }
   })
 
   app.patch('/admin/services/:id', adminOnly, async (request, reply) => {
@@ -268,7 +288,7 @@ export async function adminRoutes(app: FastifyInstance) {
         descriptionDe: z.string().optional(),
         price: z.number().optional(),
         durationMin: z.number().int().positive().optional(),
-        imageUrl: z.string().min(1).optional(),
+        imageUrl: z.string().optional(),
         featured: z.boolean().optional(),
         isActive: z.boolean().optional(),
         sortOrder: z.number().optional(),
@@ -306,14 +326,18 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.delete('/admin/services/:id', adminOnly, async (request, reply) => {
     const { id } = request.params as { id: string }
-    await prisma.service.update({ where: { id }, data: { isActive: false } })
-    return { ok: true }
+    try {
+      await prisma.service.update({ where: { id }, data: { isActive: false, featured: false } })
+      return { ok: true, soft: true }
+    } catch {
+      return reply.status(404).send({ error: 'Not found' })
+    }
   })
 
   // ——— Masters ———
   app.get('/admin/masters', adminOnly, async () => {
     const rows = await prisma.masterProfile.findMany({
-      orderBy: { sortOrder: 'asc' },
+      orderBy: [{ isActive: 'desc' }, { sortOrder: 'asc' }],
       include: {
         user: true,
         services: true,
@@ -324,7 +348,7 @@ export async function adminRoutes(app: FastifyInstance) {
       id: m.id,
       userId: m.userId,
       email: m.user.email,
-      name: `${m.user.firstName} ${m.user.lastName}`,
+      name: `${m.user.firstName} ${m.user.lastName}`.trim() || m.user.email,
       firstName: m.user.firstName,
       lastName: m.user.lastName,
       role: { ru: m.roleRu, de: m.roleDe },
@@ -332,6 +356,7 @@ export async function adminRoutes(app: FastifyInstance) {
       image: m.imageUrl,
       rating: Number(m.rating),
       isActive: m.isActive,
+      showOnHome: m.showOnHome,
       specialties: m.services.map((s) => s.serviceId),
       bookingsCount: m._count.bookings,
     }))
@@ -342,14 +367,15 @@ export async function adminRoutes(app: FastifyInstance) {
       .object({
         email: z.string().email(),
         password: z.string().min(6),
-        firstName: z.string(),
-        lastName: z.string(),
+        firstName: z.string().optional().default(''),
+        lastName: z.string().optional().default(''),
         phone: z.string().optional(),
-        roleRu: z.string(),
-        roleDe: z.string(),
-        bioRu: z.string(),
-        bioDe: z.string(),
-        imageUrl: z.string(),
+        roleRu: z.string().optional().default(''),
+        roleDe: z.string().optional().default(''),
+        bioRu: z.string().optional().default(''),
+        bioDe: z.string().optional().default(''),
+        imageUrl: z.string().optional().default(''),
+        showOnHome: z.boolean().optional().default(true),
         specialtyIds: z.array(z.string()).optional(),
         sortOrder: z.number().optional(),
       })
@@ -362,13 +388,15 @@ export async function adminRoutes(app: FastifyInstance) {
     }
 
     const passwordHash = await bcrypt.hash(body.data.password, 10)
+    const firstName = body.data.firstName.trim() || email.split('@')[0] || 'Master'
+    const lastName = body.data.lastName.trim()
     const user = await prisma.user.create({
       data: {
         email,
         passwordHash,
         role: Role.MASTER,
-        firstName: body.data.firstName,
-        lastName: body.data.lastName,
+        firstName,
+        lastName,
         phone: body.data.phone,
         masterProfile: {
           create: {
@@ -377,6 +405,7 @@ export async function adminRoutes(app: FastifyInstance) {
             bioRu: body.data.bioRu,
             bioDe: body.data.bioDe,
             imageUrl: body.data.imageUrl,
+            showOnHome: body.data.showOnHome,
             sortOrder: body.data.sortOrder ?? 0,
             services: body.data.specialtyIds?.length
               ? {
@@ -410,6 +439,7 @@ export async function adminRoutes(app: FastifyInstance) {
         bioDe: z.string().optional(),
         imageUrl: z.string().optional(),
         isActive: z.boolean().optional(),
+        showOnHome: z.boolean().optional(),
         specialtyIds: z.array(z.string()).optional(),
         sortOrder: z.number().optional(),
       })
@@ -422,9 +452,13 @@ export async function adminRoutes(app: FastifyInstance) {
     if (body.data.specialtyIds) {
       await prisma.$transaction([
         prisma.masterService.deleteMany({ where: { masterId: id } }),
-        prisma.masterService.createMany({
-          data: body.data.specialtyIds.map((serviceId) => ({ masterId: id, serviceId })),
-        }),
+        ...(body.data.specialtyIds.length
+          ? [
+              prisma.masterService.createMany({
+                data: body.data.specialtyIds.map((serviceId) => ({ masterId: id, serviceId })),
+              }),
+            ]
+          : []),
       ])
     }
 
@@ -437,6 +471,7 @@ export async function adminRoutes(app: FastifyInstance) {
         bioDe: body.data.bioDe,
         imageUrl: body.data.imageUrl,
         isActive: body.data.isActive,
+        showOnHome: body.data.showOnHome,
         sortOrder: body.data.sortOrder,
         user: {
           update: {
@@ -456,11 +491,27 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.delete('/admin/masters/:id', adminOnly, async (request, reply) => {
     const { id } = request.params as { id: string }
+    const master = await prisma.masterProfile.findUnique({
+      where: { id },
+      include: { _count: { select: { bookings: true } } },
+    })
+    if (!master) return reply.status(404).send({ error: 'Not found' })
+
+    // Hard-delete when nothing references the master; otherwise deactivate
+    if (master._count.bookings === 0) {
+      try {
+        await prisma.user.delete({ where: { id: master.userId } })
+        return { ok: true, soft: false }
+      } catch {
+        /* FK elsewhere (e.g. authored notes) — fall through to soft delete */
+      }
+    }
+
     await prisma.masterProfile.update({
       where: { id },
-      data: { isActive: false, user: { update: { isActive: false } } },
+      data: { isActive: false, showOnHome: false, user: { update: { isActive: false } } },
     })
-    return { ok: true }
+    return { ok: true, soft: true }
   })
 
   // ——— Bookings ———
@@ -493,6 +544,20 @@ export async function adminRoutes(app: FastifyInstance) {
       },
     })
 
+    const salonTz = process.env.TZ || 'Europe/Berlin'
+    const dateFmt = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: salonTz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+    const timeFmt = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: salonTz,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
+
     return rows.map((b) => {
       const clientName = b.client
         ? `${b.client.user.firstName} ${b.client.user.lastName}`
@@ -500,8 +565,8 @@ export async function adminRoutes(app: FastifyInstance) {
       return {
         id: b.id,
         startsAt: b.startsAt.toISOString(),
-        date: b.startsAt.toISOString().slice(0, 10),
-        time: b.startsAt.toISOString().slice(11, 16),
+        date: dateFmt.format(b.startsAt),
+        time: timeFmt.format(b.startsAt),
         status: b.status.toLowerCase(),
         notes: b.notes,
         price: Number(b.priceSnapshot),
@@ -623,7 +688,12 @@ export async function adminRoutes(app: FastifyInstance) {
         data: {
           status: body.data.status,
           notes: body.data.notes,
-          cancelledAt: body.data.status === 'CANCELLED' ? new Date() : undefined,
+          cancelledAt:
+            body.data.status === 'CANCELLED'
+              ? new Date()
+              : body.data.status
+                ? null
+                : undefined,
         },
       })
     } catch {
@@ -656,9 +726,9 @@ export async function adminRoutes(app: FastifyInstance) {
         headlineDe: z.string(),
         bodyRu: z.string(),
         bodyDe: z.string(),
-        discountPct: z.number().int().optional(),
-        startsAt: z.string().optional(),
-        endsAt: z.string().optional(),
+        discountPct: z.number().int().optional().nullable(),
+        startsAt: z.string().nullable().optional(),
+        endsAt: z.string().nullable().optional(),
         isActive: z.boolean().optional(),
         serviceIds: z.array(z.string()).optional(),
       })
@@ -701,34 +771,41 @@ export async function adminRoutes(app: FastifyInstance) {
       .safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: 'Invalid body' })
 
+    const existing = await prisma.promo.findUnique({ where: { id } })
+    if (!existing) return reply.status(404).send({ error: 'Not found' })
+
     if (body.data.serviceIds) {
       await prisma.$transaction([
         prisma.promoService.deleteMany({ where: { promoId: id } }),
-        prisma.promoService.createMany({
-          data: body.data.serviceIds.map((serviceId) => ({ promoId: id, serviceId })),
-        }),
+        ...(body.data.serviceIds.length
+          ? [
+              prisma.promoService.createMany({
+                data: body.data.serviceIds.map((serviceId) => ({ promoId: id, serviceId })),
+              }),
+            ]
+          : []),
       ])
     }
 
-    try {
-      const { serviceIds: _s, startsAt, endsAt, ...rest } = body.data
-      return await prisma.promo.update({
-        where: { id },
-        data: {
-          ...rest,
-          startsAt: startsAt === undefined ? undefined : startsAt ? new Date(startsAt) : null,
-          endsAt: endsAt === undefined ? undefined : endsAt ? new Date(endsAt) : null,
-        },
-        include: { services: true },
-      })
-    } catch {
-      return reply.status(404).send({ error: 'Not found' })
-    }
+    const { serviceIds: _s, startsAt, endsAt, ...rest } = body.data
+    return prisma.promo.update({
+      where: { id },
+      data: {
+        ...rest,
+        startsAt: startsAt === undefined ? undefined : startsAt ? new Date(startsAt) : null,
+        endsAt: endsAt === undefined ? undefined : endsAt ? new Date(endsAt) : null,
+      },
+      include: { services: true },
+    })
   })
 
   app.delete('/admin/promos/:id', adminOnly, async (request, reply) => {
     const { id } = request.params as { id: string }
-    await prisma.promo.update({ where: { id }, data: { isActive: false } })
-    return { ok: true }
+    try {
+      await prisma.promo.update({ where: { id }, data: { isActive: false } })
+      return { ok: true, soft: true }
+    } catch {
+      return reply.status(404).send({ error: 'Not found' })
+    }
   })
 }

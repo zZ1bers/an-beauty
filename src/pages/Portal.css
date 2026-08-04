@@ -265,6 +265,10 @@
   border-bottom: 1px solid var(--stroke);
 }
 
+.admin__row.is-inactive {
+  opacity: 0.55;
+}
+
 .admin__row:last-child {
   border-bottom: none;
 }
@@ -537,6 +541,10 @@
 
 .admin__upcoming-row em {
   white-space: nowrap;
+}
+
+.admin__cat.is-inactive {
+  opacity: 0.55;
 }
 
 .admin__cat {

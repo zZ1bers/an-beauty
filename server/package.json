@@ -12,6 +12,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:ensure-admin": "tsx scripts/ensure-admin.ts",
+    "db:seed-catalog": "tsx scripts/seed-catalog.ts",
     "db:studio": "prisma studio",
     "db:push": "prisma db push"
   },

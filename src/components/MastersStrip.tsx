@@ -52,7 +52,7 @@ export function MastersStrip() {
   const showControls = masters.length > visible
 
   useEffect(() => {
-    void api<Master[]>('/masters', { auth: false }).then(setMasters)
+    void api<Master[]>('/masters?home=1', { auth: false }).then(setMasters)
   }, [])
 
   useEffect(() => {
@@ -163,7 +163,12 @@ export function MastersStrip() {
               {masters.map((master, i) => (
                 <li key={master.id} className="masters__item">
                   <div className="masters__photo">
-                    <img src={master.image} alt={master.name} loading="lazy" draggable={false} />
+                    <img
+                      src={master.image || '/placeholder-master.svg'}
+                      alt={master.name}
+                      loading="lazy"
+                      draggable={false}
+                    />
                     <span className="masters__index">{String(i + 1).padStart(2, '0')}</span>
                   </div>
 

@@ -132,6 +132,15 @@ docker compose -f docker-compose.prod.yml --env-file .env exec \
   api npx prisma db seed
 ```
 
+### Прайс (категории и услуги)
+
+Безопасно перезапускать — upsert по slug, фото не затирает:
+
+```bash
+cd /opt/an.beauty
+docker compose -f docker-compose.prod.yml --env-file .env exec api npm run db:seed-catalog
+```
+
 ### Сброс пароля админа (без очистки БД)
 
 Если логин не подходит, а данные уже есть — не делай seed, а обнови админа из `.env`:

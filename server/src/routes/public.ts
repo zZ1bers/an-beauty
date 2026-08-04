@@ -46,7 +46,7 @@ function mapMaster(m: {
 }) {
   return {
     id: m.id,
-    name: `${m.user.firstName} ${m.user.lastName}`,
+    name: `${m.user.firstName} ${m.user.lastName}`.trim(),
     firstName: m.user.firstName,
     lastName: m.user.lastName,
     role: { ru: m.roleRu, de: m.roleDe },
@@ -80,15 +80,32 @@ export async function publicRoutes(app: FastifyInstance) {
     const featured = q.success && q.data.featured === 'true' ? true : undefined
 
     const rows = await prisma.service.findMany({
-      where: { isActive: true, ...(featured ? { featured: true } : {}) },
+      where: {
+        isActive: true,
+        category: { isActive: true },
+        ...(featured ? { featured: true } : {}),
+      },
       orderBy: { sortOrder: 'asc' },
     })
     return rows.map(mapService)
   })
 
-  app.get('/masters', async () => {
+  app.get('/masters', async (request) => {
+    const q = z
+      .object({
+        home: z
+          .union([z.literal('1'), z.literal('true'), z.literal('0'), z.literal('false')])
+          .optional(),
+      })
+      .safeParse(request.query)
+    const homeOnly =
+      q.success && (q.data.home === '1' || q.data.home === 'true')
+
     const rows = await prisma.masterProfile.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        ...(homeOnly ? { showOnHome: true } : {}),
+      },
       orderBy: { sortOrder: 'asc' },
       include: {
         user: { select: { firstName: true, lastName: true } },

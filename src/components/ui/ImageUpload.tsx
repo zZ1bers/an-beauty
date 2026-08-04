@@ -20,11 +20,13 @@ export function ImageUpload({ value, onChange, label }: Props) {
     locale === 'ru'
       ? {
           pick: 'Загрузить фото',
+          clear: 'Убрать',
           hint: 'JPG, PNG, WEBP · до 8 МБ · с телефона или ПК',
           uploading: 'Загрузка…',
         }
       : {
           pick: 'Foto hochladen',
+          clear: 'Entfernen',
           hint: 'JPG, PNG, WEBP · max. 8 MB · Handy oder PC',
           uploading: 'Hochladen…',
         }
@@ -95,6 +97,16 @@ export function ImageUpload({ value, onChange, label }: Props) {
             {uploading ? <LoaderCircle size={16} className="spin" /> : <ImagePlus size={16} />}
             {uploading ? copy.uploading : copy.pick}
           </button>
+          {value ? (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={uploading}
+              onClick={() => onChange('')}
+            >
+              {copy.clear}
+            </button>
+          ) : null}
           <p className="image-upload__hint">{copy.hint}</p>
           {error && <p className="image-upload__error">{error}</p>}
         </div>
