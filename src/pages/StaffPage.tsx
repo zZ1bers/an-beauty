@@ -54,8 +54,8 @@ const DAY_LABELS_RU = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
 const DAY_LABELS_DE = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 const HEAD_RU = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const HEAD_DE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
-/** 08:00–19:00 start times (30 min cells; day ends 19:30) */
-const SLOT_TIMES = Array.from({ length: 23 }, (_, i) => {
+/** 08:00–19:30 start times (30 min cells; day ends 20:00) */
+const SLOT_TIMES = Array.from({ length: 24 }, (_, i) => {
   const total = 8 * 60 + i * 30
   const h = Math.floor(total / 60)
   const m = total % 60
@@ -124,7 +124,7 @@ export function StaffPage() {
           return {
             dayOfWeek,
             startTime: existing?.startTime ?? '08:00',
-            endTime: existing?.endTime ?? '19:30',
+            endTime: existing?.endTime ?? '20:00',
             enabled: !!existing,
           }
         }),
@@ -739,7 +739,7 @@ export function StaffPage() {
                   const h = hoursDraft.find((x) => x.dayOfWeek === dayOfWeek) ?? {
                     dayOfWeek,
                     startTime: '08:00',
-                    endTime: '19:30',
+                    endTime: '20:00',
                     enabled: false,
                   }
                   return (
@@ -757,7 +757,7 @@ export function StaffPage() {
                                   {
                                     dayOfWeek,
                                     startTime: '08:00',
-                                    endTime: '19:30',
+                                    endTime: '20:00',
                                     enabled: e.target.checked,
                                   },
                                 ]

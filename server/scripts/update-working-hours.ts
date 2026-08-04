@@ -1,5 +1,5 @@
 /**
- * Non-destructive: set all master working hours to 08:00–19:30.
+ * Non-destructive: set all master working hours to 08:00–20:00.
  * Does not wipe users, bookings, services, etc.
  *
  *   npm run db:update-hours
@@ -11,9 +11,9 @@ const prisma = new PrismaClient()
 
 async function main() {
   const r = await prisma.workingHours.updateMany({
-    data: { startTime: '08:00', endTime: '19:30' },
+    data: { startTime: '08:00', endTime: '20:00' },
   })
-  console.log(`Updated ${r.count} working-hours rows → 08:00–19:30`)
+  console.log(`Updated ${r.count} working-hours rows → 08:00–20:00`)
 }
 
 main()
