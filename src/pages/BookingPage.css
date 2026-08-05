@@ -86,6 +86,53 @@
   background: rgba(0, 0, 0, 0.14);
 }
 
+.booking__by-category {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.booking__cat-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.booking__cat-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.booking__cat-icon {
+  flex-shrink: 0;
+  font-size: 1.15rem;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+.booking__cat-title {
+  margin: 0;
+  flex-shrink: 0;
+  font-size: clamp(1.35rem, 3.2vw, 1.75rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.booking__cat-line {
+  flex: 1;
+  min-width: 2rem;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(231, 113, 125, 0.55),
+    rgba(231, 113, 125, 0.12),
+    transparent
+  );
+}
+
 .booking__filter-row {
   display: grid;
   gap: 0.55rem;

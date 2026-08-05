@@ -282,6 +282,63 @@ export function BookingPage() {
     return list
   }, [masterId, filteredServices, services, browseCategoryId, browseMasterId, masters])
 
+  /** Categories that currently have at least one bookable service */
+  const categoriesWithServices = useMemo(() => {
+    const ids = new Set(services.map((s) => s.categoryId))
+    return categories.filter((c) => ids.has(c.id))
+  }, [categories, services])
+
+  /** When «all categories»: group by category order; skip empty groups */
+  const servicesByCategory = useMemo(() => {
+    const byCat = new Map<string, Service[]>()
+    for (const s of servicesForPick) {
+      const list = byCat.get(s.categoryId) ?? []
+      list.push(s)
+      byCat.set(s.categoryId, list)
+    }
+    return categories
+      .filter((c) => (byCat.get(c.id)?.length ?? 0) > 0)
+      .map((c) => ({ category: c, services: byCat.get(c.id)! }))
+  }, [servicesForPick, categories])
+
+  const selectBrowseCategory = (categoryId: string) => {
+    setBrowseCategoryId(categoryId)
+    if (!categoryId || masterId) return
+
+    const serviceIdsInCat = new Set(
+      services.filter((s) => s.categoryId === categoryId).map((s) => s.id),
+    )
+    const matching = masters.filter((m) =>
+      m.specialties.some((sid) => serviceIdsInCat.has(sid)),
+    )
+    if (matching.length === 0) {
+      setBrowseMasterId('')
+      return
+    }
+    if (browseMasterId && matching.some((m) => m.id === browseMasterId)) return
+    setBrowseMasterId(matching[0].id)
+  }
+
+  const renderServiceCard = (s: Service) => (
+    <button
+      key={s.id}
+      type="button"
+      className={`booking__service ${serviceId === s.id ? 'is-selected' : ''}`}
+      onClick={() => setDetailService(s)}
+    >
+      <img src={s.image || '/placeholder-master.svg'} alt="" />
+      <div>
+        <strong className="serif">{s.name[locale]}</strong>
+        <ServicePrice
+          price={s.price}
+          duration={s.duration}
+          discountPct={promoForService(s.id, promos)}
+        />
+        <em className="booking__service-hint">{t.booking.viewDetails}</em>
+      </div>
+    </button>
+  )
+
   const needsContact =
     showContact ||
     !user ||
@@ -417,16 +474,16 @@ export function BookingPage() {
                         <button
                           type="button"
                           className={`booking__chip ${!browseCategoryId ? 'is-active' : ''}`}
-                          onClick={() => setBrowseCategoryId('')}
+                          onClick={() => selectBrowseCategory('')}
                         >
                           {t.booking.allCategories}
                         </button>
-                        {categories.map((c) => (
+                        {categoriesWithServices.map((c) => (
                           <button
                             key={c.id}
                             type="button"
                             className={`booking__chip ${browseCategoryId === c.id ? 'is-active' : ''}`}
-                            onClick={() => setBrowseCategoryId(c.id)}
+                            onClick={() => selectBrowseCategory(c.id)}
                           >
                             {c.icon ? <span className="booking__chip-icon">{c.icon}</span> : null}
                             {c.name[locale]}
@@ -465,30 +522,28 @@ export function BookingPage() {
                       </div>
                     )}
                   </div>
-                  <div className="booking__grid">
-                    {servicesForPick.length === 0 && (
-                      <p className="booking__no-slots">{t.booking.emptyServices}</p>
-                    )}
-                    {servicesForPick.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        className={`booking__service ${serviceId === s.id ? 'is-selected' : ''}`}
-                        onClick={() => setDetailService(s)}
-                      >
-                        <img src={s.image} alt="" />
-                        <div>
-                          <strong className="serif">{s.name[locale]}</strong>
-                          <ServicePrice
-                            price={s.price}
-                            duration={s.duration}
-                            discountPct={promoForService(s.id, promos)}
-                          />
-                          <em className="booking__service-hint">{t.booking.viewDetails}</em>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
+                  {servicesForPick.length === 0 ? (
+                    <p className="booking__no-slots">{t.booking.emptyServices}</p>
+                  ) : !browseCategoryId ? (
+                    <div className="booking__by-category">
+                      {servicesByCategory.map(({ category, services: catServices }) => (
+                        <section key={category.id} className="booking__cat-block">
+                          <header className="booking__cat-head">
+                            {category.icon ? (
+                              <span className="booking__cat-icon" aria-hidden>
+                                {category.icon}
+                              </span>
+                            ) : null}
+                            <h3 className="booking__cat-title serif">{category.name[locale]}</h3>
+                            <span className="booking__cat-line" aria-hidden />
+                          </header>
+                          <div className="booking__grid">{catServices.map(renderServiceCard)}</div>
+                        </section>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="booking__grid">{servicesForPick.map(renderServiceCard)}</div>
+                  )}
                 </div>
               )}
 

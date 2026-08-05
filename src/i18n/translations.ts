@@ -133,7 +133,7 @@ export const translations = {
         'Каждая услуга в нашем салоне — это сочетание профессионального подхода, современных методик и внимания к деталям. Выбирайте отдельные процедуры или комплексный уход, который будет работать именно на ваш результат.',
       from: 'от',
       book: 'Записаться',
-      all: 'Все ритуалы',
+      all: 'Все услуги',
     },
     masters: {
       eyebrow: 'Команда',
@@ -526,7 +526,7 @@ export const translations = {
         'Jede Leistung in unserem Salon verbindet professionellen Ansatz, moderne Methoden und Liebe zum Detail. Wählen Sie einzelne Behandlungen oder eine ganzheitliche Pflege — abgestimmt auf Ihr Ergebnis.',
       from: 'ab',
       book: 'Buchen',
-      all: 'Alle Rituale',
+      all: 'Alle Leistungen',
     },
     masters: {
       eyebrow: 'Team',

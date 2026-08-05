@@ -85,7 +85,7 @@ export async function publicRoutes(app: FastifyInstance) {
         category: { isActive: true },
         ...(featured ? { featured: true } : {}),
       },
-      orderBy: { sortOrder: 'asc' },
+      orderBy: [{ category: { sortOrder: 'asc' } }, { sortOrder: 'asc' }],
     })
     return rows.map(mapService)
   })
