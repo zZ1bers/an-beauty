@@ -5,6 +5,8 @@ import { BookingStatus, Role } from '@prisma/client'
 import { z } from 'zod'
 import { prisma } from '../db.js'
 import { getAvailableSlots, resolveBookableSlot } from '../services/booking.js'
+import { notifyBookingCreated } from '../services/bookingNotify.js'
+import type { BookingLocale } from '../services/bookingMessages.js'
 import { resolvePromoPrice } from '../services/promo.js'
 
 function mapService(s: {
@@ -252,6 +254,12 @@ export async function publicRoutes(app: FastifyInstance) {
 
     const priced = await resolvePromoPrice(service.id, service.price)
 
+    const master = await prisma.masterProfile.findUnique({
+      where: { id: body.data.masterId },
+      include: { user: true },
+    })
+    if (!master) return reply.status(404).send({ error: 'Master not found' })
+
     const booking = await prisma.booking.create({
       data: {
         clientId: profile.id,
@@ -270,13 +278,25 @@ export async function publicRoutes(app: FastifyInstance) {
       },
     })
 
-    await prisma.notification.create({
-      data: {
-        userId: user.id,
-        type: 'BOOKING',
-        title: 'Запись подтверждена',
-        body: `${service.nameRu} — ${startsAt.toISOString().slice(0, 16).replace('T', ' ')}`,
-      },
+    const locale = (user.locale ?? 'ru') as BookingLocale
+    await notifyBookingCreated({
+      bookingId: booking.id,
+      locale,
+      clientUserId: user.id,
+      clientEmail: user.email,
+      clientPhone: user.phone,
+      clientFirstName: user.firstName,
+      clientLastName: user.lastName,
+      masterUserId: master.userId,
+      masterEmail: master.user.email,
+      masterLocale: (master.user.locale ?? 'ru') as BookingLocale,
+      masterFirstName: master.user.firstName,
+      masterLastName: master.user.lastName,
+      serviceNameRu: service.nameRu,
+      serviceNameDe: service.nameDe,
+      startsAt,
+      price: Number(priced.price),
+      notes: body.data.notes?.trim() || null,
     })
 
     const token = app.jwt.sign({

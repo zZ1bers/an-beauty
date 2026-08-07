@@ -163,8 +163,12 @@ export function BookingPage() {
       setMasters(m)
       setCategories(c)
       setPromos(p)
+      if (initialService) {
+        const match = s.find((row) => row.id === initialService)
+        if (match) setBrowseCategoryId(match.categoryId)
+      }
     })
-  }, [])
+  }, [initialService])
 
   useEffect(() => {
     if (user?.role === 'CLIENT') {
@@ -268,11 +272,9 @@ export function BookingPage() {
   const showServiceStep = masterFirst ? step === 1 : step === 0
   const mastersForPick = serviceId ? filteredMasters : masters
 
-  const servicesForPick = useMemo(() => {
+  /** Services after master filters (before category drill-in) */
+  const servicesAfterMasterFilter = useMemo(() => {
     let list = masterId ? filteredServices : services
-    if (browseCategoryId) {
-      list = list.filter((s) => s.categoryId === browseCategoryId)
-    }
     if (!masterId && browseMasterId) {
       const master = masters.find((m) => m.id === browseMasterId)
       if (master) {
@@ -280,18 +282,37 @@ export function BookingPage() {
       }
     }
     return list
-  }, [masterId, filteredServices, services, browseCategoryId, browseMasterId, masters])
+  }, [masterId, filteredServices, services, browseMasterId, masters])
 
-  /** Categories that currently have at least one bookable service */
-  const categoriesWithServices = useMemo(() => {
-    const ids = new Set(services.map((s) => s.categoryId))
-    return categories.filter((c) => ids.has(c.id))
-  }, [categories, services])
+  const servicesForPick = useMemo(() => {
+    if (!browseCategoryId) return servicesAfterMasterFilter
+    return servicesAfterMasterFilter.filter((s) => s.categoryId === browseCategoryId)
+  }, [servicesAfterMasterFilter, browseCategoryId])
 
-  /** When «all categories»: group by category order; skip empty groups */
-  const servicesByCategory = useMemo(() => {
+  /** Category cards: only categories that still have services after master filter */
+  const categoryCards = useMemo(() => {
     const byCat = new Map<string, Service[]>()
-    for (const s of servicesForPick) {
+    for (const s of servicesAfterMasterFilter) {
+      const list = byCat.get(s.categoryId) ?? []
+      list.push(s)
+      byCat.set(s.categoryId, list)
+    }
+    return categories
+      .filter((c) => (byCat.get(c.id)?.length ?? 0) > 0)
+      .map((c) => {
+        const list = byCat.get(c.id)!
+        return {
+          category: c,
+          count: list.length,
+          cover: list.find((s) => s.image)?.image || '/placeholder-master.svg',
+        }
+      })
+  }, [servicesAfterMasterFilter, categories])
+
+  /** Services of selected master, grouped by category order */
+  const masterServicesByCategory = useMemo(() => {
+    const byCat = new Map<string, Service[]>()
+    for (const s of servicesAfterMasterFilter) {
       const list = byCat.get(s.categoryId) ?? []
       list.push(s)
       byCat.set(s.categoryId, list)
@@ -299,7 +320,14 @@ export function BookingPage() {
     return categories
       .filter((c) => (byCat.get(c.id)?.length ?? 0) > 0)
       .map((c) => ({ category: c, services: byCat.get(c.id)! }))
-  }, [servicesForPick, categories])
+  }, [servicesAfterMasterFilter, categories])
+
+  const selectedBrowseCategory = categories.find((c) => c.id === browseCategoryId)
+  const masterFilterActive = Boolean(browseMasterId || masterId)
+  /** No master filter → category cards first; with master → their services */
+  const showCategoryCards = !browseCategoryId && !masterFilterActive
+  const showMasterServiceList = !browseCategoryId && masterFilterActive
+  const showCategoryServiceList = Boolean(browseCategoryId)
 
   const selectBrowseCategory = (categoryId: string) => {
     setBrowseCategoryId(categoryId)
@@ -317,6 +345,20 @@ export function BookingPage() {
     }
     if (browseMasterId && matching.some((m) => m.id === browseMasterId)) return
     setBrowseMasterId(matching[0].id)
+  }
+
+  const backToCategories = () => {
+    setBrowseCategoryId('')
+  }
+
+  const confirmServicePick = (s: Service) => {
+    pickService(s.id)
+    if (!masterId && browseMasterId) {
+      pickMaster(browseMasterId)
+    }
+    setDetailService(null)
+    // Service-first: master is step 1. Master-first: already past master → datetime (2).
+    setStep(masterFirst ? 2 : 1)
   }
 
   const renderServiceCard = (s: Service) => (
@@ -338,6 +380,45 @@ export function BookingPage() {
       </div>
     </button>
   )
+
+  const renderMasterFilter = () =>
+    !masterId ? (
+      <div className="booking__filters">
+        <div className="booking__filter-row">
+          <span className="booking__filter-label">{t.booking.filterMaster}</span>
+          <div className="booking__filter-chips" role="group" aria-label={t.booking.filterMaster}>
+            <button
+              type="button"
+              className={`booking__chip ${!browseMasterId ? 'is-active' : ''}`}
+              onClick={() => {
+                setBrowseMasterId('')
+                setBrowseCategoryId('')
+              }}
+            >
+              {t.booking.allMasters}
+            </button>
+            {masters.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                className={`booking__chip booking__chip--master ${browseMasterId === m.id ? 'is-active' : ''}`}
+                onClick={() => {
+                  setBrowseMasterId(m.id)
+                  setBrowseCategoryId('')
+                }}
+              >
+                <img
+                  src={m.image || '/placeholder-master.svg'}
+                  alt=""
+                  className="booking__chip-avatar"
+                />
+                {m.name.split(' ')[0]}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    ) : null
 
   const needsContact =
     showContact ||
@@ -375,6 +456,7 @@ export function BookingPage() {
             masterId,
             startsAt: startsAt.toISOString(),
             notes: notes.trim() || undefined,
+            locale,
           }),
         })
         setDone(true)
@@ -467,82 +549,95 @@ export function BookingPage() {
             >
               {showServiceStep && (
                 <div className="booking__service-step">
-                  <div className="booking__filters">
-                    <div className="booking__filter-row">
-                      <span className="booking__filter-label">{t.booking.filterCategory}</span>
-                      <div className="booking__filter-chips" role="group" aria-label={t.booking.filterCategory}>
-                        <button
-                          type="button"
-                          className={`booking__chip ${!browseCategoryId ? 'is-active' : ''}`}
-                          onClick={() => selectBrowseCategory('')}
-                        >
-                          {t.booking.allCategories}
-                        </button>
-                        {categoriesWithServices.map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            className={`booking__chip ${browseCategoryId === c.id ? 'is-active' : ''}`}
-                            onClick={() => selectBrowseCategory(c.id)}
-                          >
-                            {c.icon ? <span className="booking__chip-icon">{c.icon}</span> : null}
-                            {c.name[locale]}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                  {renderMasterFilter()}
 
-                    {!masterId && (
-                      <div className="booking__filter-row">
-                        <span className="booking__filter-label">{t.booking.filterMaster}</span>
-                        <div className="booking__filter-chips" role="group" aria-label={t.booking.filterMaster}>
-                          <button
-                            type="button"
-                            className={`booking__chip ${!browseMasterId ? 'is-active' : ''}`}
-                            onClick={() => setBrowseMasterId('')}
-                          >
-                            {t.booking.allMasters}
-                          </button>
-                          {masters.map((m) => (
+                  {showCategoryCards && (
+                    <>
+                      <p className="booking__pick-hint">{t.booking.pickCategory}</p>
+                      {categoryCards.length === 0 ? (
+                        <p className="booking__no-slots">{t.booking.emptyServices}</p>
+                      ) : (
+                        <div className="booking__category-grid">
+                          {categoryCards.map(({ category, count, cover }) => (
                             <button
-                              key={m.id}
+                              key={category.id}
                               type="button"
-                              className={`booking__chip booking__chip--master ${browseMasterId === m.id ? 'is-active' : ''}`}
-                              onClick={() => setBrowseMasterId(m.id)}
+                              className="booking__category-card"
+                              onClick={() => selectBrowseCategory(category.id)}
                             >
-                              <img
-                                src={m.image || '/placeholder-master.svg'}
-                                alt=""
-                                className="booking__chip-avatar"
-                              />
-                              {m.name.split(' ')[0]}
+                              <img src={cover} alt="" />
+                              <div className="booking__category-card-body">
+                                <span className="booking__category-card-icon" aria-hidden>
+                                  {category.icon || '✦'}
+                                </span>
+                                <strong className="serif">{category.name[locale]}</strong>
+                                <em>
+                                  {count} {t.booking.servicesInCategory}
+                                </em>
+                              </div>
                             </button>
                           ))}
                         </div>
+                      )}
+                    </>
+                  )}
+
+                  {showMasterServiceList && (
+                    <>
+                      {masterServicesByCategory.length === 0 ? (
+                        <p className="booking__no-slots">{t.booking.emptyServices}</p>
+                      ) : (
+                        <div className="booking__by-category">
+                          {masterServicesByCategory.map(({ category, services: catServices }) => (
+                            <section key={category.id} className="booking__cat-block">
+                              <header className="booking__cat-head">
+                                {category.icon ? (
+                                  <span className="booking__cat-icon" aria-hidden>
+                                    {category.icon}
+                                  </span>
+                                ) : null}
+                                <h3 className="booking__cat-title serif">{category.name[locale]}</h3>
+                                <span className="booking__cat-line" aria-hidden />
+                              </header>
+                              <div className="booking__grid booking__grid--nested">
+                                {catServices.map(renderServiceCard)}
+                              </div>
+                            </section>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {showCategoryServiceList && (
+                    <>
+                      <div className="booking__cat-toolbar">
+                        <button
+                          type="button"
+                          className="booking__back-cats"
+                          onClick={backToCategories}
+                        >
+                          <ChevronLeft size={18} />
+                          {t.booking.backToCategories}
+                        </button>
+                        <div className="booking__cat-head booking__cat-head--toolbar">
+                          {selectedBrowseCategory?.icon ? (
+                            <span className="booking__cat-icon" aria-hidden>
+                              {selectedBrowseCategory.icon}
+                            </span>
+                          ) : null}
+                          <h3 className="booking__cat-title serif">
+                            {selectedBrowseCategory?.name[locale]}
+                          </h3>
+                          <span className="booking__cat-line" aria-hidden />
+                        </div>
                       </div>
-                    )}
-                  </div>
-                  {servicesForPick.length === 0 ? (
-                    <p className="booking__no-slots">{t.booking.emptyServices}</p>
-                  ) : !browseCategoryId ? (
-                    <div className="booking__by-category">
-                      {servicesByCategory.map(({ category, services: catServices }) => (
-                        <section key={category.id} className="booking__cat-block">
-                          <header className="booking__cat-head">
-                            {category.icon ? (
-                              <span className="booking__cat-icon" aria-hidden>
-                                {category.icon}
-                              </span>
-                            ) : null}
-                            <h3 className="booking__cat-title serif">{category.name[locale]}</h3>
-                            <span className="booking__cat-line" aria-hidden />
-                          </header>
-                          <div className="booking__grid">{catServices.map(renderServiceCard)}</div>
-                        </section>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="booking__grid">{servicesForPick.map(renderServiceCard)}</div>
+                      {servicesForPick.length === 0 ? (
+                        <p className="booking__no-slots">{t.booking.emptyServices}</p>
+                      ) : (
+                        <div className="booking__grid">{servicesForPick.map(renderServiceCard)}</div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -787,13 +882,7 @@ export function BookingPage() {
               <button
                 type="button"
                 className="btn btn-primary"
-                onClick={() => {
-                  pickService(detailService.id)
-                  if (!masterId && browseMasterId) {
-                    pickMaster(browseMasterId)
-                  }
-                  setDetailService(null)
-                }}
+                onClick={() => confirmServicePick(detailService)}
               >
                 {t.booking.selectService}
               </button>

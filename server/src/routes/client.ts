@@ -4,7 +4,9 @@ import { z } from 'zod'
 import { prisma } from '../db.js'
 import { requireRole } from '../plugins/auth.js'
 import { resolveBookableSlot } from '../services/booking.js'
+import { notifyBookingCreated } from '../services/bookingNotify.js'
 import { resolvePromoPrice } from '../services/promo.js'
+import type { BookingLocale } from '../services/bookingMessages.js'
 
 function mapBooking(b: {
   id: string
@@ -133,12 +135,24 @@ export async function clientRoutes(app: FastifyInstance) {
         masterId: z.string(),
         startsAt: z.string().min(10),
         notes: z.string().optional(),
+        locale: z.enum(['ru', 'de']).optional(),
       })
       .safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: 'Invalid body' })
 
-    const profile = await prisma.clientProfile.findUnique({ where: { userId: request.user.id } })
+    const profile = await prisma.clientProfile.findUnique({
+      where: { userId: request.user.id },
+      include: { user: true },
+    })
     if (!profile) return reply.status(404).send({ error: 'Profile not found' })
+
+    const locale = (body.data.locale ?? profile.user.locale ?? 'ru') as BookingLocale
+    if (body.data.locale && body.data.locale !== profile.user.locale) {
+      await prisma.user.update({
+        where: { id: profile.userId },
+        data: { locale: body.data.locale },
+      })
+    }
 
     const startsAt = new Date(body.data.startsAt)
     let service
@@ -161,6 +175,12 @@ export async function clientRoutes(app: FastifyInstance) {
 
     const priced = await resolvePromoPrice(service.id, service.price)
 
+    const master = await prisma.masterProfile.findUnique({
+      where: { id: body.data.masterId },
+      include: { user: true },
+    })
+    if (!master) return reply.status(404).send({ error: 'Master not found' })
+
     const booking = await prisma.booking.create({
       data: {
         clientId: profile.id,
@@ -179,13 +199,24 @@ export async function clientRoutes(app: FastifyInstance) {
       },
     })
 
-    await prisma.notification.create({
-      data: {
-        userId: request.user.id,
-        type: 'BOOKING',
-        title: 'Запись подтверждена',
-        body: `${service.nameRu} — ${startsAt.toISOString().slice(0, 16).replace('T', ' ')}`,
-      },
+    await notifyBookingCreated({
+      bookingId: booking.id,
+      locale,
+      clientUserId: profile.userId,
+      clientEmail: profile.user.email,
+      clientPhone: profile.user.phone,
+      clientFirstName: profile.user.firstName,
+      clientLastName: profile.user.lastName,
+      masterUserId: master.userId,
+      masterEmail: master.user.email,
+      masterLocale: (master.user.locale ?? 'ru') as BookingLocale,
+      masterFirstName: master.user.firstName,
+      masterLastName: master.user.lastName,
+      serviceNameRu: service.nameRu,
+      serviceNameDe: service.nameDe,
+      startsAt,
+      price: Number(priced.price),
+      notes: body.data.notes,
     })
 
     return reply.status(201).send(mapBooking(booking))
@@ -246,7 +277,9 @@ export async function clientRoutes(app: FastifyInstance) {
     return mapBooking(updated)
   })
 
-  app.get('/me/notifications', clientOnly, async (request) => {
+  const notifyAccess = { preHandler: requireRole(Role.CLIENT, Role.MASTER) }
+
+  app.get('/me/notifications', notifyAccess, async (request) => {
     const rows = await prisma.notification.findMany({
       where: { userId: request.user.id },
       orderBy: { createdAt: 'desc' },
@@ -262,7 +295,7 @@ export async function clientRoutes(app: FastifyInstance) {
     }))
   })
 
-  app.post('/me/notifications/:id/read', clientOnly, async (request, reply) => {
+  app.post('/me/notifications/:id/read', notifyAccess, async (request, reply) => {
     const { id } = request.params as { id: string }
     const n = await prisma.notification.findFirst({
       where: { id, userId: request.user.id },

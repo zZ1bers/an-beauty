@@ -28,4 +28,15 @@ export const config = {
     pass: process.env.SMTP_PASS || '',
     from: process.env.MAIL_FROM || process.env.SMTP_USER || 'AN.Beauty <noreply@an-beauty.com>',
   },
+  /** Twilio SMS (optional — logged in dev if missing) */
+  sms: {
+    accountSid: process.env.TWILIO_ACCOUNT_SID || '',
+    authToken: process.env.TWILIO_AUTH_TOKEN || '',
+    from: process.env.TWILIO_FROM || '',
+  },
+  salon: {
+    addressShort: process.env.SALON_ADDRESS || 'Rückerstr. 4, 90419 Nürnberg',
+  },
+  /** Obfuscated staff portal path (must match frontend PORTAL_STAFF) */
+  staffPortalPath: process.env.STAFF_PORTAL_PATH || '/b3Fh6tY1cJ9sD5uA',
 }

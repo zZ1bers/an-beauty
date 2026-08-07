@@ -100,9 +100,12 @@ export function StaffPage() {
   const headLabels = locale === 'ru' ? HEAD_RU : HEAD_DE
   const today = todayISO()
 
-  const loadData = async () => {
-    setLoading(true)
-    setError('')
+  const loadData = async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent ?? false
+    if (!silent) {
+      setLoading(true)
+      setError('')
+    }
     try {
       const from = startOfMonth(calendarMonth)
       const to = addDays(addMonths(calendarMonth, 1), 7)
@@ -131,14 +134,16 @@ export function StaffPage() {
       )
       if (b[0] && !noteClientId) setNoteClientId(b[0].client.id)
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Error')
+      if (!silent) setError(e instanceof ApiError ? e.message : 'Error')
+      else toast.push(e instanceof ApiError ? e.message : 'Error', 'err')
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
   useEffect(() => {
-    void loadData()
+    // First paint: full loader. Later date/month changes: keep UI mounted (no scroll jump).
+    void loadData({ silent: !!schedule })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, calendarMonth])
 
@@ -269,7 +274,7 @@ export function StaffPage() {
         body: JSON.stringify({ status }),
       })
       toast.push(t.admin.save)
-      await loadData()
+      await loadData({ silent: true })
       if (clientsScope === 'all') await loadAllBookings()
     } catch (e) {
       toast.push(e instanceof ApiError ? e.message : 'Error', 'err')
@@ -338,7 +343,7 @@ export function StaffPage() {
         })
         toast.push(t.staff.closeSlots)
       }
-      await loadData()
+      await loadData({ silent: true })
     } catch (e) {
       toast.push(e instanceof ApiError ? e.message : 'Error', 'err')
     } finally {
@@ -374,7 +379,7 @@ export function StaffPage() {
         })
         toast.push(t.staff.fullDayOff)
       }
-      await loadData()
+      await loadData({ silent: true })
     } catch (e) {
       toast.push(e instanceof ApiError ? e.message : 'Error', 'err')
     } finally {
@@ -393,7 +398,7 @@ export function StaffPage() {
         }),
       })
       toast.push(t.admin.save)
-      await loadData()
+      await loadData({ silent: true })
     } catch (e) {
       toast.push(e instanceof ApiError ? e.message : 'Error', 'err')
     }

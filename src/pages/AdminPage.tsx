@@ -395,9 +395,12 @@ export function AdminPage() {
 
   const [saving, setSaving] = useState(false)
 
-  const load = async () => {
-    setLoading(true)
-    setError('')
+  const load = async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent ?? false
+    if (!silent) {
+      setLoading(true)
+      setError('')
+    }
     try {
       const [st, m, s, c, b, cl, p] = await Promise.all([
         api<Stats>('/admin/stats'),
@@ -425,9 +428,10 @@ export function AdminPage() {
       setClients(cl)
       setPromos(p)
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : t.admin.error)
+      if (!silent) setError(e instanceof ApiError ? e.message : t.admin.error)
+      else toast.push(e instanceof ApiError ? e.message : t.admin.error, 'err')
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
@@ -614,7 +618,7 @@ export function AdminPage() {
       }
       setMasterModal(null)
       toast.push(t.admin.save)
-      await load()
+      await load({ silent: true })
     } catch (err) {
       toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
     } finally {
@@ -629,7 +633,7 @@ export function AdminPage() {
         method: 'DELETE',
       })
       toast.push(res.soft ? t.admin.deactivated : t.admin.deleted)
-      await load()
+      await load({ silent: true })
     } catch (err) {
       toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
     }
@@ -642,7 +646,7 @@ export function AdminPage() {
         body: JSON.stringify({ isActive: true, showOnHome: true }),
       })
       toast.push(t.admin.restore)
-      await load()
+      await load({ silent: true })
     } catch (err) {
       toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
     }
@@ -653,7 +657,7 @@ export function AdminPage() {
     try {
       const res = await api<{ ok: boolean; soft?: boolean }>(path, { method: 'DELETE' })
       toast.push(res.soft ? t.admin.deactivated : t.admin.deleted)
-      await load()
+      await load({ silent: true })
     } catch (err) {
       toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
     }
@@ -663,7 +667,7 @@ export function AdminPage() {
     try {
       await api(path, { method: 'PATCH', body: JSON.stringify(body) })
       toast.push(t.admin.restore)
-      await load()
+      await load({ silent: true })
     } catch (err) {
       toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
     }
@@ -709,7 +713,7 @@ export function AdminPage() {
       }
       setServiceModal(null)
       toast.push(t.admin.save)
-      await load()
+      await load({ silent: true })
     } catch (err) {
       toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
     } finally {
@@ -751,7 +755,7 @@ export function AdminPage() {
       setEditingCategoryId(null)
       setCategoryForm(emptyCategory)
       toast.push(t.admin.save)
-      await load()
+      await load({ silent: true })
     } catch (err) {
       toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
     } finally {
@@ -783,7 +787,7 @@ export function AdminPage() {
         body: JSON.stringify(clientCrm),
       })
       toast.push(t.admin.save)
-      await load()
+      await load({ silent: true })
       await openClient(clientDetail.id)
     } catch (err) {
       toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
@@ -799,7 +803,7 @@ export function AdminPage() {
         body: JSON.stringify({ status: status.toUpperCase() }),
       })
       toast.push(t.admin.save)
-      await load()
+      await load({ silent: true })
     } catch (err) {
       toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
     }
@@ -846,7 +850,7 @@ export function AdminPage() {
       }
       setPromoModal(null)
       toast.push(t.admin.save)
-      await load()
+      await load({ silent: true })
     } catch (err) {
       toast.push(err instanceof ApiError ? err.message : t.admin.error, 'err')
     } finally {
@@ -1012,7 +1016,7 @@ export function AdminPage() {
       })
       toast.push(t.admin.bookingCreated)
       setWalkInModal(false)
-      await load()
+      await load({ silent: true })
     } catch (e) {
       const msg =
         e instanceof ApiError

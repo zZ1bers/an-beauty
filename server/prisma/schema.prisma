@@ -160,6 +160,8 @@ model Booking {
   guestLastName  String?
   guestPhone     String?
   cancelledAt   DateTime?
+  /// When day-before SMS reminder was sent
+  reminderSmsSentAt DateTime?
   createdBy     String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -172,6 +174,7 @@ model Booking {
   @@index([clientId, startsAt])
   @@index([status])
   @@index([startsAt])
+  @@index([reminderSmsSentAt, startsAt])
 }
 
 model WorkingHours {

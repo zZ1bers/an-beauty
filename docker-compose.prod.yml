@@ -40,6 +40,10 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       MAIL_FROM: ${MAIL_FROM:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM: ${TWILIO_FROM:-}
+      SALON_ADDRESS: ${SALON_ADDRESS:-Rückerstr. 4, 90419 Nürnberg}
     volumes:
       - anbeauty_uploads:/app/uploads
     networks:

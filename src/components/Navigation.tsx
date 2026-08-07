@@ -34,6 +34,8 @@ export function Navigation() {
     isPortalPath(location.pathname) || location.pathname.startsWith('/login')
 
   const isClient = user?.role === 'CLIENT'
+  const isMaster = user?.role === 'MASTER'
+  const canNotify = isClient || isMaster
   const clientName = isClient && user ? user.firstName : null
 
   const links = [
@@ -74,7 +76,7 @@ export function Navigation() {
   const unread = notifications.filter((n) => !n.readAt).length
 
   const loadNotifications = useCallback(async () => {
-    if (!isClient) {
+    if (!canNotify) {
       setNotifications([])
       return
     }
@@ -84,17 +86,17 @@ export function Navigation() {
     } catch {
       /* keep previous */
     }
-  }, [isClient])
+  }, [canNotify])
 
   useEffect(() => {
     void loadNotifications()
   }, [loadNotifications, location.pathname])
 
   useEffect(() => {
-    if (!isClient) return
+    if (!canNotify) return
     const id = window.setInterval(() => void loadNotifications(), 60_000)
     return () => window.clearInterval(id)
-  }, [isClient, loadNotifications])
+  }, [canNotify, loadNotifications])
 
   useEffect(() => {
     if (!open) return
@@ -185,7 +187,7 @@ export function Navigation() {
               <Link to={homeForRole(user.role)} className="btn btn-ghost nav__cta">
                 {portalLabel}
               </Link>
-              {isClient ? (
+              {canNotify && (
                 <button
                   type="button"
                   className="nav__notify"
@@ -196,7 +198,8 @@ export function Navigation() {
                   <Bell size={16} />
                   {unread > 0 && <i className="nav__notify-dot" />}
                 </button>
-              ) : (
+              )}
+              {!isClient && (
                 <button
                   className="nav__lang nav__logout"
                   onClick={() => logout()}
@@ -292,7 +295,7 @@ export function Navigation() {
         </nav>
 
         <div className="nav__mobile-foot">
-          {isClient && (
+          {canNotify && (
             <button
               type="button"
               className="nav__mobile-notify"
@@ -358,7 +361,7 @@ export function Navigation() {
         </div>
       </aside>
 
-      {isClient && (
+      {canNotify && (
         <Drawer
           open={drawerOpen}
           title={t.client.notifications}

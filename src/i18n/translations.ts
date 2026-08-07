@@ -184,6 +184,9 @@ export const translations = {
       viewDetails: 'Подробнее',
       selectService: 'Выбрать услугу',
       emptyServices: 'Нет услуг по выбранным фильтрам',
+      pickCategory: 'Выберите категорию',
+      backToCategories: 'К категориям',
+      servicesInCategory: 'услуг',
     },
     client: {
       title: 'Личный кабинет',
@@ -577,6 +580,9 @@ export const translations = {
       viewDetails: 'Mehr erfahren',
       selectService: 'Leistung wählen',
       emptyServices: 'Keine Leistungen für diese Filter',
+      pickCategory: 'Kategorie wählen',
+      backToCategories: 'Zu den Kategorien',
+      servicesInCategory: 'Leistungen',
     },
     client: {
       title: 'Kundenkonto',
