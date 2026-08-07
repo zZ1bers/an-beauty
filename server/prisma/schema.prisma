@@ -103,6 +103,8 @@ model ServiceCategory {
   icon      String
   nameRu    String
   nameDe    String
+  /// Cover image for booking category cards
+  imageUrl  String   @default("")
   sortOrder Int      @default(0)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())

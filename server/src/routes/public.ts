@@ -71,6 +71,7 @@ export async function publicRoutes(app: FastifyInstance) {
       id: c.id,
       slug: c.slug,
       icon: c.icon,
+      image: c.imageUrl || '',
       name: { ru: c.nameRu, de: c.nameDe },
     }))
   })

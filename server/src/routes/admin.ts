@@ -172,6 +172,7 @@ export async function adminRoutes(app: FastifyInstance) {
         icon: z.string().optional().default('✨'),
         nameRu: z.string(),
         nameDe: z.string(),
+        imageUrl: z.string().optional().default(''),
         sortOrder: z.number().optional(),
       })
       .safeParse(request.body)
@@ -194,6 +195,7 @@ export async function adminRoutes(app: FastifyInstance) {
         icon: z.string().optional(),
         nameRu: z.string().optional(),
         nameDe: z.string().optional(),
+        imageUrl: z.string().optional(),
         sortOrder: z.number().optional(),
         isActive: z.boolean().optional(),
       })

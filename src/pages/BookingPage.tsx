@@ -33,6 +33,7 @@ type Category = {
   id: string
   slug: string
   icon: string
+  image?: string
   name: { ru: string; de: string }
 }
 
@@ -304,7 +305,10 @@ export function BookingPage() {
         return {
           category: c,
           count: list.length,
-          cover: list.find((s) => s.image)?.image || '/placeholder-master.svg',
+          cover:
+            c.image ||
+            list.find((s) => s.image)?.image ||
+            '/placeholder-master.svg',
         }
       })
   }, [servicesAfterMasterFilter, categories])

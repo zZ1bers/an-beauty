@@ -175,6 +175,7 @@ type CategoryRow = {
   icon: string
   nameRu: string
   nameDe: string
+  imageUrl?: string
   isActive: boolean
 }
 
@@ -280,11 +281,15 @@ const emptyService = {
   masterIds: [] as string[],
 }
 
+const DEFAULT_CATEGORY_IMAGE =
+  'https://images.unsplash.com/photo-1499002238440-d264edd948ad?w=900&q=80'
+
 const emptyCategory = {
   slug: '',
   icon: '✦',
   nameRu: '',
   nameDe: '',
+  imageUrl: DEFAULT_CATEGORY_IMAGE,
 }
 
 const emptyPromo = {
@@ -734,6 +739,7 @@ export function AdminPage() {
       icon: c.icon,
       nameRu: c.nameRu,
       nameDe: c.nameDe,
+      imageUrl: c.imageUrl || DEFAULT_CATEGORY_IMAGE,
     })
     setCategoryModal(true)
   }
@@ -1491,6 +1497,11 @@ export function AdminPage() {
               <div className="admin__cats">
                 {categories.map((c) => (
                   <div key={c.id} className={`admin__cat glass ${!c.isActive ? 'is-inactive' : ''}`}>
+                    <img
+                      className="admin__cat-cover"
+                      src={c.imageUrl || DEFAULT_CATEGORY_IMAGE}
+                      alt=""
+                    />
                     <span>{c.icon}</span>
                     <strong>
                       {locale === 'ru' ? c.nameRu : c.nameDe}
@@ -2036,6 +2047,11 @@ export function AdminPage() {
               onChange={(e) => setCategoryForm({ ...categoryForm, icon: e.target.value })}
             />
           </label>
+          <ImageUpload
+            label={t.admin.photoOptional}
+            value={categoryForm.imageUrl}
+            onChange={(url) => setCategoryForm({ ...categoryForm, imageUrl: url })}
+          />
           <label>
             {t.admin.nameRu}
             <input
