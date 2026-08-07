@@ -189,31 +189,6 @@
   color: var(--text-muted);
 }
 
-.booking__cat-toolbar {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-}
-
-.booking__back-cats {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  align-self: flex-start;
-  padding: 0.35rem 0.15rem;
-  border: none;
-  background: transparent;
-  color: var(--coral);
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.booking__back-cats:hover {
-  color: var(--coral-deep);
-}
-
 .booking__cat-head {
   display: flex;
   align-items: center;

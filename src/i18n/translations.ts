@@ -185,7 +185,6 @@ export const translations = {
       selectService: 'Выбрать услугу',
       emptyServices: 'Нет услуг по выбранным фильтрам',
       pickCategory: 'Выберите категорию',
-      backToCategories: 'К категориям',
       servicesInCategory: 'услуг',
     },
     client: {
@@ -581,7 +580,6 @@ export const translations = {
       selectService: 'Leistung wählen',
       emptyServices: 'Keine Leistungen für diese Filter',
       pickCategory: 'Kategorie wählen',
-      backToCategories: 'Zu den Kategorien',
       servicesInCategory: 'Leistungen',
     },
     client: {

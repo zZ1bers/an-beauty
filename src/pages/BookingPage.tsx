@@ -331,25 +331,18 @@ export function BookingPage() {
 
   const selectBrowseCategory = (categoryId: string) => {
     setBrowseCategoryId(categoryId)
-    if (!categoryId || masterId) return
+  }
 
-    const serviceIdsInCat = new Set(
-      services.filter((s) => s.categoryId === categoryId).map((s) => s.id),
-    )
-    const matching = masters.filter((m) =>
-      m.specialties.some((sid) => serviceIdsInCat.has(sid)),
-    )
-    if (matching.length === 0) {
-      setBrowseMasterId('')
+  const goBack = () => {
+    // Inside a category → category cards first; then previous booking step
+    if (showServiceStep && browseCategoryId) {
+      setBrowseCategoryId('')
       return
     }
-    if (browseMasterId && matching.some((m) => m.id === browseMasterId)) return
-    setBrowseMasterId(matching[0].id)
+    setStep((s) => Math.max(0, s - 1))
   }
 
-  const backToCategories = () => {
-    setBrowseCategoryId('')
-  }
+  const canGoBack = step > 0 || (showServiceStep && !!browseCategoryId)
 
   const confirmServicePick = (s: Service) => {
     pickService(s.id)
@@ -611,26 +604,16 @@ export function BookingPage() {
 
                   {showCategoryServiceList && (
                     <>
-                      <div className="booking__cat-toolbar">
-                        <button
-                          type="button"
-                          className="booking__back-cats"
-                          onClick={backToCategories}
-                        >
-                          <ChevronLeft size={18} />
-                          {t.booking.backToCategories}
-                        </button>
-                        <div className="booking__cat-head booking__cat-head--toolbar">
-                          {selectedBrowseCategory?.icon ? (
-                            <span className="booking__cat-icon" aria-hidden>
-                              {selectedBrowseCategory.icon}
-                            </span>
-                          ) : null}
-                          <h3 className="booking__cat-title serif">
-                            {selectedBrowseCategory?.name[locale]}
-                          </h3>
-                          <span className="booking__cat-line" aria-hidden />
-                        </div>
+                      <div className="booking__cat-head booking__cat-head--toolbar">
+                        {selectedBrowseCategory?.icon ? (
+                          <span className="booking__cat-icon" aria-hidden>
+                            {selectedBrowseCategory.icon}
+                          </span>
+                        ) : null}
+                        <h3 className="booking__cat-title serif">
+                          {selectedBrowseCategory?.name[locale]}
+                        </h3>
+                        <span className="booking__cat-line" aria-hidden />
                       </div>
                       {servicesForPick.length === 0 ? (
                         <p className="booking__no-slots">{t.booking.emptyServices}</p>
@@ -775,8 +758,8 @@ export function BookingPage() {
               <div className="booking__nav">
                 <button
                   className="btn btn-ghost"
-                  disabled={step === 0}
-                  onClick={() => setStep((s) => Math.max(0, s - 1))}
+                  disabled={!canGoBack}
+                  onClick={goBack}
                 >
                   <ChevronLeft size={16} />
                   {t.booking.back}
