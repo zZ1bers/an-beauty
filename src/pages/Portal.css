@@ -810,6 +810,24 @@
   font-size: 0.85em;
 }
 
+.admin__booking-contact {
+  display: block !important;
+  margin-top: 0.2rem;
+  font-size: 0.78rem !important;
+  color: var(--text) !important;
+  -webkit-line-clamp: 2 !important;
+  overflow: visible !important;
+}
+
+.admin__booking-contact a {
+  color: var(--coral);
+  text-decoration: none;
+}
+
+.admin__booking-contact a:hover {
+  text-decoration: underline;
+}
+
 .admin__walkin-schedule {
   display: grid;
   gap: 0.85rem;

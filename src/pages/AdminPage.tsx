@@ -183,6 +183,8 @@ type BookingRow = {
   id: string
   client: string
   clientId?: string | null
+  clientEmail?: string | null
+  clientPhone?: string | null
   isGuest?: boolean
   guestPhone?: string | null
   date: string
@@ -1398,6 +1400,11 @@ export function AdminPage() {
                           <span>
                             {b.service.name[locale]} · {b.master.name}
                           </span>
+                          {(b.clientPhone || b.clientEmail) && (
+                            <span className="admin__booking-contact">
+                              {b.clientPhone || b.clientEmail}
+                            </span>
+                          )}
                         </div>
                         <em>
                           {b.date} · {b.time}
@@ -1634,7 +1641,7 @@ export function AdminPage() {
                 <div className="admin__table glass-strong">
                   {filteredBookings.length === 0 && <p className="portal__empty">{t.admin.empty}</p>}
                   {filteredBookings.map((b) => (
-                    <div key={b.id} className="admin__row">
+                    <div key={b.id} className="admin__row admin__row--booking">
                       <div className="admin__booking-avatar">{b.client.slice(0, 1)}</div>
                       <div>
                         <strong>
@@ -1646,8 +1653,18 @@ export function AdminPage() {
                         <span>
                           {b.service.name[locale]} · {b.master.name}
                           {b.price != null ? ` · €${b.price}` : ''}
-                          {b.isGuest && b.guestPhone ? ` · ${b.guestPhone}` : ''}
                         </span>
+                        {(b.clientPhone || b.clientEmail) && (
+                          <span className="admin__booking-contact">
+                            {b.clientPhone ? (
+                              <a href={`tel:${b.clientPhone}`}>{b.clientPhone}</a>
+                            ) : null}
+                            {b.clientPhone && b.clientEmail ? ' · ' : null}
+                            {b.clientEmail ? (
+                              <a href={`mailto:${b.clientEmail}`}>{b.clientEmail}</a>
+                            ) : null}
+                          </span>
+                        )}
                       </div>
                       <em>
                         {b.date} {b.time}

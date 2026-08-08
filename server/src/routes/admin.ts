@@ -541,7 +541,11 @@ export async function adminRoutes(app: FastifyInstance) {
       take: 200,
       include: {
         service: true,
-        client: { include: { user: { select: { firstName: true, lastName: true } } } },
+        client: {
+          include: {
+            user: { select: { firstName: true, lastName: true, email: true, phone: true } },
+          },
+        },
         master: { include: { user: { select: { firstName: true, lastName: true } } } },
       },
     })
@@ -574,6 +578,8 @@ export async function adminRoutes(app: FastifyInstance) {
         price: Number(b.priceSnapshot),
         client: clientName,
         clientId: b.clientId,
+        clientEmail: b.client?.user.email ?? null,
+        clientPhone: b.client?.user.phone ?? b.guestPhone ?? null,
         isGuest: !b.clientId,
         guestPhone: b.guestPhone,
         service: {
