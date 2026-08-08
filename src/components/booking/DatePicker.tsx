@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
+import { addDays, addMonths, monthGrid, startOfMonth, todayISO } from '../../lib/datetime'
+import { salonDayOfWeek } from '../../lib/salonTime'
 import './DatePicker.css'
 
 type DatePickerProps = {
@@ -9,33 +11,9 @@ type DatePickerProps = {
   calendarLabel: string
   masterName?: string
   withMasterLabel?: string
-  /** JS getDay(): 0=Sun … 6=Sat */
+  /** JS getDay(): 0=Sun … 6=Sat (salon / Europe/Berlin) */
   workingDays?: number[]
   closedLabel?: string
-}
-
-function toDateStr(d: Date) {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-function startOfDay(d: Date) {
-  const x = new Date(d)
-  x.setHours(0, 0, 0, 0)
-  return x
-}
-
-function addDays(d: Date, n: number) {
-  const x = new Date(d)
-  x.setDate(x.getDate() + n)
-  return x
-}
-
-function parseDate(str: string) {
-  const [y, m, d] = str.split('-').map(Number)
-  return new Date(y, m - 1, d)
 }
 
 const WEEKDAYS_RU = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
@@ -51,12 +29,9 @@ export function DatePicker({
   workingDays,
   closedLabel,
 }: DatePickerProps) {
-  const today = useMemo(() => startOfDay(new Date()), [])
+  const today = useMemo(() => todayISO(), [])
   const stripRef = useRef<HTMLDivElement>(null)
-  const [monthCursor, setMonthCursor] = useState(() => {
-    const d = parseDate(value)
-    return new Date(d.getFullYear(), d.getMonth(), 1)
-  })
+  const [monthCursor, setMonthCursor] = useState(() => startOfMonth(value))
   const [calOpen, setCalOpen] = useState(false)
 
   const workingSet = useMemo(() => {
@@ -64,9 +39,9 @@ export function DatePicker({
     return new Set(workingDays)
   }, [workingDays])
 
-  const isClosed = (d: Date) => {
-    if (!workingSet) return d.getDay() === 0
-    return !workingSet.has(d.getDay())
+  const isClosed = (dateStr: string) => {
+    if (!workingSet) return salonDayOfWeek(dateStr) === 0
+    return !workingSet.has(salonDayOfWeek(dateStr))
   }
 
   const stripDays = useMemo(() => {
@@ -74,8 +49,7 @@ export function DatePicker({
   }, [today])
 
   useEffect(() => {
-    const d = parseDate(value)
-    setMonthCursor(new Date(d.getFullYear(), d.getMonth(), 1))
+    setMonthCursor(startOfMonth(value))
   }, [value])
 
   useEffect(() => {
@@ -87,37 +61,25 @@ export function DatePicker({
 
   const weekdays = locale === 'ru' ? WEEKDAYS_RU : WEEKDAYS_DE
 
-  const monthLabel = monthCursor.toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'de-DE', {
-    month: 'long',
-    year: 'numeric',
-  })
+  const monthLabel = useMemo(() => {
+    const [y, m] = monthCursor.split('-').map(Number)
+    return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'de-DE', {
+      timeZone: 'UTC',
+      month: 'long',
+      year: 'numeric',
+    })
+  }, [monthCursor, locale])
 
-  const calendarCells = useMemo(() => {
-    const year = monthCursor.getFullYear()
-    const month = monthCursor.getMonth()
-    const first = new Date(year, month, 1)
-    const startOffset = (first.getDay() + 6) % 7
-    const daysInMonth = new Date(year, month + 1, 0).getDate()
-    const cells: Array<{ date: Date | null; key: string }> = []
-
-    for (let i = 0; i < startOffset; i++) {
-      cells.push({ date: null, key: `e-${i}` })
-    }
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day)
-      cells.push({ date, key: toDateStr(date) })
-    }
-    return cells
-  }, [monthCursor])
+  const calendarCells = useMemo(() => monthGrid(monthCursor), [monthCursor])
 
   const scrollStrip = (dir: -1 | 1) => {
     stripRef.current?.scrollBy({ left: dir * 180, behavior: 'smooth' })
   }
 
-  const selectDay = (d: Date) => {
-    if (startOfDay(d) < today) return
-    if (isClosed(d)) return
-    onChange(toDateStr(d))
+  const selectDay = (dateStr: string) => {
+    if (dateStr < today) return
+    if (isClosed(dateStr)) return
+    onChange(dateStr)
   }
 
   return (
@@ -150,12 +112,14 @@ export function DatePicker({
           <ChevronLeft size={18} />
         </button>
         <div className="date-picker__strip" ref={stripRef}>
-          {stripDays.map((d) => {
-            const key = toDateStr(d)
+          {stripDays.map((key) => {
             const selected = key === value
-            const closed = isClosed(d)
-            const isToday = key === toDateStr(today)
-            const weekday = d.toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'de-DE', {
+            const closed = isClosed(key)
+            const isToday = key === today
+            const [y, m, d] = key.split('-').map(Number)
+            const labelDate = new Date(Date.UTC(y, m - 1, d))
+            const weekday = labelDate.toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'de-DE', {
+              timeZone: 'UTC',
               weekday: 'short',
             })
             return (
@@ -165,14 +129,15 @@ export function DatePicker({
                 disabled={closed}
                 title={closed ? closedLabel : undefined}
                 className={`date-picker__day ${selected ? 'is-selected' : ''} ${closed ? 'is-closed' : ''} ${isToday ? 'is-today' : ''}`}
-                onClick={() => selectDay(d)}
+                onClick={() => selectDay(key)}
               >
                 <span className="date-picker__weekday">{weekday}</span>
-                <span className="date-picker__num">{d.getDate()}</span>
+                <span className="date-picker__num">{d}</span>
                 <span className="date-picker__month">
                   {closed
                     ? closedLabel ?? (locale === 'ru' ? 'вых.' : 'frei')
-                    : d.toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'de-DE', {
+                    : labelDate.toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'de-DE', {
+                        timeZone: 'UTC',
                         month: 'short',
                       })}
                 </span>
@@ -196,9 +161,7 @@ export function DatePicker({
             <button
               type="button"
               className="date-picker__arrow"
-              onClick={() =>
-                setMonthCursor((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))
-              }
+              onClick={() => setMonthCursor((m) => startOfMonth(addMonths(m, -1)))}
               aria-label="Prev month"
             >
               <ChevronLeft size={18} />
@@ -207,9 +170,7 @@ export function DatePicker({
             <button
               type="button"
               className="date-picker__arrow"
-              onClick={() =>
-                setMonthCursor((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))
-              }
+              onClick={() => setMonthCursor((m) => startOfMonth(addMonths(m, 1)))}
               aria-label="Next month"
             >
               <ChevronRight size={18} />
@@ -221,28 +182,28 @@ export function DatePicker({
             ))}
           </div>
           <div className="date-picker__grid">
-            {calendarCells.map((cell) => {
-              if (!cell.date) {
-                return <span key={cell.key} className="date-picker__cell is-empty" />
+            {calendarCells.map((cell, i) => {
+              if (!cell) {
+                return <span key={`e-${i}`} className="date-picker__cell is-empty" />
               }
-              const key = toDateStr(cell.date)
-              const past = startOfDay(cell.date) < today
-              const closed = isClosed(cell.date)
+              const key = cell.date
+              const past = key < today
+              const closed = isClosed(key)
               const selected = key === value
-              const isToday = key === toDateStr(today)
+              const isToday = key === today
               return (
                 <button
-                  key={cell.key}
+                  key={key}
                   type="button"
                   disabled={past || closed}
                   title={closed ? closedLabel : undefined}
                   className={`date-picker__cell ${selected ? 'is-selected' : ''} ${closed ? 'is-closed' : ''} ${isToday ? 'is-today' : ''}`}
                   onClick={() => {
-                    selectDay(cell.date!)
+                    selectDay(key)
                     setCalOpen(false)
                   }}
                 >
-                  {cell.date.getDate()}
+                  {Number(key.slice(8))}
                 </button>
               )
             })}

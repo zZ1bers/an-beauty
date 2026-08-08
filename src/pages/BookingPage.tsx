@@ -5,6 +5,7 @@ import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useLang } from '../i18n/LanguageContext'
 import { useAuth } from '../auth/AuthContext'
 import { api, ApiError, type AuthUser } from '../lib/api'
+import { addDays, localDateTime, salonDayOfWeek, todayISO } from '../lib/datetime'
 import { Footer } from '../components/Footer'
 import { Modal } from '../components/ui/Modal'
 import { DatePicker } from '../components/booking/DatePicker'
@@ -191,20 +192,14 @@ export function BookingPage() {
     void api<{ workingDays: number[] }>(`/masters/${masterId}/hours`, { auth: false }).then(
       (r) => {
         setWorkingDays(r.workingDays)
-        const selected = new Date(`${date}T12:00:00`)
-        if (!r.workingDays.includes(selected.getDay())) {
-          const start = new Date()
-          start.setHours(12, 0, 0, 0)
+        if (!r.workingDays.includes(salonDayOfWeek(date))) {
+          let cur = todayISO()
           for (let i = 0; i < 28; i++) {
-            const d = new Date(start)
-            d.setDate(start.getDate() + i)
-            if (r.workingDays.includes(d.getDay())) {
-              const y = d.getFullYear()
-              const m = String(d.getMonth() + 1).padStart(2, '0')
-              const day = String(d.getDate()).padStart(2, '0')
-              setDate(`${y}-${m}-${day}`)
+            if (r.workingDays.includes(salonDayOfWeek(cur))) {
+              setDate(cur)
               break
             }
+            cur = addDays(cur, 1)
           }
         }
       },
@@ -426,7 +421,7 @@ export function BookingPage() {
     setBusy(true)
     setError('')
     try {
-      const startsAt = new Date(`${date}T${slot}:00`)
+      const startsAt = localDateTime(date, slot)
 
       if (user?.role === 'CLIENT') {
         if (needsContact) {

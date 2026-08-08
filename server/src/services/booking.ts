@@ -1,5 +1,11 @@
 import { BookingStatus } from '@prisma/client'
 import { prisma } from '../db.js'
+import {
+  salonDateStr,
+  salonDateTime,
+  salonDayBounds,
+  salonDayOfWeek,
+} from '../lib/salonTime.js'
 
 /** Start times every 30 minutes; a longer service blocks consecutive slots via duration overlap */
 const SLOT_STEP_MIN = 30
@@ -17,29 +23,15 @@ function fromMinutes(total: number) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
-function dayBounds(dateStr: string) {
-  const start = new Date(`${dateStr}T00:00:00`)
-  const end = new Date(`${dateStr}T23:59:59.999`)
-  return { start, end }
-}
-
-function dateStrLocal(d: Date) {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
 export async function getAvailableSlots(masterId: string, dateStr: string, durationMin: number) {
-  const day = new Date(`${dateStr}T12:00:00`)
-  const dayOfWeek = day.getDay()
+  const dayOfWeek = salonDayOfWeek(dateStr)
 
   const hours = await prisma.workingHours.findUnique({
     where: { masterId_dayOfWeek: { masterId, dayOfWeek } },
   })
   if (!hours) return { slots: [] as string[], dayOff: true }
 
-  const { start: dayStart, end: dayEnd } = dayBounds(dateStr)
+  const { start: dayStart, end: dayEnd } = salonDayBounds(dateStr)
   const now = new Date()
 
   const [bookings, timeOffs] = await Promise.all([
@@ -65,7 +57,8 @@ export async function getAvailableSlots(masterId: string, dateStr: string, durat
   const slots: string[] = []
 
   for (let t = workStart; t + durationMin <= workEnd; t += SLOT_STEP_MIN) {
-    const slotStart = new Date(`${dateStr}T${fromMinutes(t)}:00`)
+    const label = fromMinutes(t)
+    const slotStart = salonDateTime(dateStr, label)
     const slotEnd = new Date(slotStart.getTime() + durationMin * 60_000)
     if (slotStart <= now) continue
 
@@ -73,7 +66,7 @@ export async function getAvailableSlots(masterId: string, dateStr: string, durat
       bookings.some((b) => b.startsAt < slotEnd && b.endsAt > slotStart) ||
       timeOffs.some((o) => o.startsAt < slotEnd && o.endsAt > slotStart)
 
-    if (!busy) slots.push(fromMinutes(t))
+    if (!busy) slots.push(label)
   }
 
   return { slots, dayOff: false }
@@ -114,7 +107,8 @@ export async function resolveBookableSlot(input: {
 }
 
 export async function assertWithinWorkingHours(masterId: string, startsAt: Date, endsAt: Date) {
-  const dayOfWeek = startsAt.getDay()
+  const dateStr = salonDateStr(startsAt)
+  const dayOfWeek = salonDayOfWeek(dateStr)
   const hours = await prisma.workingHours.findUnique({
     where: { masterId_dayOfWeek: { masterId, dayOfWeek } },
   })
@@ -122,9 +116,8 @@ export async function assertWithinWorkingHours(masterId: string, startsAt: Date,
     throw new Error('DAY_OFF')
   }
 
-  const dateStr = dateStrLocal(startsAt)
-  const workStart = new Date(`${dateStr}T${fromMinutes(toMinutes(hours.startTime))}:00`)
-  const workEnd = new Date(`${dateStr}T${fromMinutes(toMinutes(hours.endTime))}:00`)
+  const workStart = salonDateTime(dateStr, fromMinutes(toMinutes(hours.startTime)))
+  const workEnd = salonDateTime(dateStr, fromMinutes(toMinutes(hours.endTime)))
   if (startsAt < workStart || endsAt > workEnd) {
     throw new Error('OUTSIDE_HOURS')
   }
@@ -202,10 +195,9 @@ export async function getAdminStats() {
 }
 
 export async function getMasterLoad(masterId: string, dateStr: string) {
-  const { start, end } = dayBounds(dateStr)
-  const day = new Date(`${dateStr}T12:00:00`)
+  const { start, end } = salonDayBounds(dateStr)
   const hours = await prisma.workingHours.findUnique({
-    where: { masterId_dayOfWeek: { masterId, dayOfWeek: day.getDay() } },
+    where: { masterId_dayOfWeek: { masterId, dayOfWeek: salonDayOfWeek(dateStr) } },
   })
   if (!hours) return 0
 
@@ -216,7 +208,7 @@ export async function getMasterLoad(masterId: string, dateStr: string) {
     where: {
       masterId,
       status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.COMPLETED] },
-      startsAt: { gte: start, lte: end },
+      startsAt: { gte: start, lt: end },
     },
   })
 

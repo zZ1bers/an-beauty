@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { prisma } from '../db.js'
 import { requireRole } from '../plugins/auth.js'
 import { getMasterLoad } from '../services/booking.js'
+import { salonDateTime, salonDayBounds } from '../lib/salonTime.js'
 
 async function getMasterProfileId(userId: string) {
   const m = await prisma.masterProfile.findUnique({ where: { userId } })
@@ -74,13 +75,14 @@ export async function masterRoutes(app: FastifyInstance) {
 
     const where: {
       masterId: string
-      startsAt?: { gte?: Date; lte?: Date }
+      startsAt?: { gte?: Date; lte?: Date; lt?: Date }
     } = { masterId }
 
     if (q.success && q.data.date) {
+      const { start, end } = salonDayBounds(q.data.date)
       where.startsAt = {
-        gte: new Date(`${q.data.date}T00:00:00`),
-        lte: new Date(`${q.data.date}T23:59:59.999`),
+        gte: start,
+        lt: end,
       }
     } else if (q.success && (q.data.from || q.data.to)) {
       where.startsAt = {
@@ -185,11 +187,16 @@ export async function masterRoutes(app: FastifyInstance) {
       })
       .safeParse(request.query)
 
-    const from = q.success && q.data.from ? new Date(q.data.from) : new Date()
-    from.setHours(0, 0, 0, 0)
+    const from =
+      q.success && q.data.from
+        ? salonDateTime(q.data.from.slice(0, 10), '00:00')
+        : salonDateTime(
+            new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(new Date()),
+            '00:00',
+          )
     const to =
       q.success && q.data.to
-        ? new Date(q.data.to)
+        ? salonDateTime(q.data.to.slice(0, 10), '23:59')
         : new Date(from.getTime() + 62 * 24 * 60 * 60 * 1000)
 
     const [workingHours, timeOffs] = await Promise.all([

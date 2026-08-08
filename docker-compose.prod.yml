@@ -28,6 +28,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
+      TZ: Europe/Berlin
       PORT: 3001
       DATABASE_URL: postgresql://${POSTGRES_USER:-anbeauty}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-anbeauty}?schema=public
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}

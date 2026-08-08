@@ -14,6 +14,7 @@ import {
   dayStart,
   formatDayLabel,
   localDateTime,
+  salonDayOfWeek,
   monthGrid,
   monthTitle,
   overlaps,
@@ -149,14 +150,14 @@ export function StaffPage() {
 
   const hoursLabel = useMemo(() => {
     if (!schedule) return '—'
-    const d = dayStart(date).getDay()
+    const d = salonDayOfWeek(date)
     const h = schedule.workingHours.find((w) => w.dayOfWeek === d)
     return h ? `${h.startTime}–${h.endTime}` : t.staff.dayOff
   }, [schedule, date, t.staff.dayOff])
 
   const isWorkingDay = useMemo(() => {
     if (!schedule) return false
-    const d = dayStart(date).getDay()
+    const d = salonDayOfWeek(date)
     return schedule.workingHours.some((w) => w.dayOfWeek === d)
   }, [schedule, date])
 
@@ -852,7 +853,7 @@ export function StaffPage() {
                   }
                   const { date: day } = cell
                   const off = dayOffIds.has(day)
-                  const dow = dayStart(day).getDay()
+                  const dow = salonDayOfWeek(day)
                   const inWeekPlan = hoursDraft.some((h) => h.dayOfWeek === dow && h.enabled)
                   const isToday = day === today
                   const isPast = day < today
