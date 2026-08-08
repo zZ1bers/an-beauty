@@ -1,4 +1,8 @@
-/** Salon wall clock — AN.Beauty is in Nürnberg (Germany). */
+/**
+ * Single source of truth for salon wall clock (Nürnberg).
+ * All booking slots, hours checks, emails, SMS, and API date/time labels
+ * must go through these helpers — never use toISOString().slice for display.
+ */
 export const SALON_TZ = 'Europe/Berlin'
 
 function pad2(n: number) {

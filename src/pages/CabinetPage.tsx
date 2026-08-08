@@ -17,7 +17,7 @@ import { api, ApiError } from '../lib/api'
 import { ConfirmDialog } from '../components/ui/Modal'
 import { useToast } from '../components/ui/Toast'
 import { Footer } from '../components/Footer'
-import { toDateStr, toTimeStr } from '../lib/datetime'
+import { localDateTime, toDateStr, toTimeStr } from '../lib/datetime'
 import './CabinetPage.css'
 import './Portal.css'
 
@@ -65,7 +65,7 @@ function bookingWhen(b: BookingItem) {
   return {
     date: b.date ?? '',
     time: b.time ?? '',
-    sort: b.date && b.time ? +new Date(`${b.date}T${b.time}:00`) : 0,
+    sort: b.date && b.time ? localDateTime(b.date, b.time).getTime() : 0,
   }
 }
 

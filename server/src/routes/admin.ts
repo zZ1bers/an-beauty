@@ -7,6 +7,7 @@ import { requireRole } from '../plugins/auth.js'
 import { getAdminStats, resolveBookableSlot } from '../services/booking.js'
 import { buildMonthlyReportPdf } from '../services/monthlyReport.js'
 import { resolvePromoPrice } from '../services/promo.js'
+import { salonDateStr, salonTimeStr } from '../lib/salonTime.js'
 
 export async function adminRoutes(app: FastifyInstance) {
   const adminOnly = { preHandler: requireRole(Role.ADMIN) }
@@ -550,20 +551,6 @@ export async function adminRoutes(app: FastifyInstance) {
       },
     })
 
-    const salonTz = process.env.TZ || 'Europe/Berlin'
-    const dateFmt = new Intl.DateTimeFormat('sv-SE', {
-      timeZone: salonTz,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    })
-    const timeFmt = new Intl.DateTimeFormat('sv-SE', {
-      timeZone: salonTz,
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    })
-
     return rows.map((b) => {
       const clientName = b.client
         ? `${b.client.user.firstName} ${b.client.user.lastName}`
@@ -571,8 +558,8 @@ export async function adminRoutes(app: FastifyInstance) {
       return {
         id: b.id,
         startsAt: b.startsAt.toISOString(),
-        date: dateFmt.format(b.startsAt),
-        time: timeFmt.format(b.startsAt),
+        date: salonDateStr(b.startsAt),
+        time: salonTimeStr(b.startsAt),
         status: b.status.toLowerCase(),
         notes: b.notes,
         price: Number(b.priceSnapshot),
@@ -659,13 +646,15 @@ export async function adminRoutes(app: FastifyInstance) {
     return reply.status(201).send({
       id: booking.id,
       startsAt: booking.startsAt.toISOString(),
-      date: booking.startsAt.toISOString().slice(0, 10),
-      time: booking.startsAt.toISOString().slice(11, 16),
+      date: salonDateStr(booking.startsAt),
+      time: salonTimeStr(booking.startsAt),
       status: booking.status.toLowerCase(),
       notes: booking.notes,
       price: Number(booking.priceSnapshot),
       client: `${booking.guestFirstName} ${booking.guestLastName}`,
       clientId: null,
+      clientEmail: null,
+      clientPhone: booking.guestPhone,
       isGuest: true,
       guestPhone: booking.guestPhone,
       service: {

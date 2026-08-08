@@ -96,13 +96,9 @@ function ServicePrice({
 }
 
 function defaultDate() {
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  while (d.getDay() === 0) d.setDate(d.getDate() + 1)
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+  let cur = addDays(todayISO(), 1)
+  while (salonDayOfWeek(cur) === 0) cur = addDays(cur, 1)
+  return cur
 }
 
 function contactComplete(c: ContactForm) {

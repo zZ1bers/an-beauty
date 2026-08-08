@@ -7,6 +7,11 @@ import {
   salonDayOfWeek,
 } from '../lib/salonTime.js'
 
+function salonMonthStart(instant = new Date()) {
+  const day = salonDateStr(instant)
+  return salonDateTime(`${day.slice(0, 7)}-01`, '00:00')
+}
+
 /** Start times every 30 minutes; a longer service blocks consecutive slots via duration overlap */
 const SLOT_STEP_MIN = 30
 const DAY_START = 10 * 60 // 10:00
@@ -157,7 +162,7 @@ export async function assertSlotFree(
 
 export async function getAdminStats() {
   const now = new Date()
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const monthStart = salonMonthStart(now)
 
   const [clients, masters, services, bookingsMonth, revenueAgg, upcoming] = await Promise.all([
     prisma.clientProfile.count(),

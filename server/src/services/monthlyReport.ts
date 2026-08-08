@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import PDFDocument from 'pdfkit'
 import { BookingStatus } from '@prisma/client'
 import { prisma } from '../db.js'
+import { salonDateStr, salonTimeStr } from '../lib/salonTime.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const FONT_DIR = path.resolve(__dirname, '../../assets/fonts')
@@ -181,13 +182,14 @@ export async function buildMonthlyReportPdf(input: {
 
   const byDay = new Map<string, typeof mapped>()
   for (const b of mapped) {
-    const day = `${b.startsAt.getFullYear()}-${String(b.startsAt.getMonth() + 1).padStart(2, '0')}-${String(b.startsAt.getDate()).padStart(2, '0')}`
+    const day = salonDateStr(b.startsAt)
     const list = byDay.get(day) ?? []
     list.push(b)
     byDay.set(day, list)
   }
 
   const monthLabel = start.toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'de-DE', {
+    timeZone: 'Europe/Berlin',
     month: 'long',
     year: 'numeric',
   })
@@ -273,19 +275,23 @@ export async function buildMonthlyReportPdf(input: {
   } else {
     for (const [day, items] of byDay) {
       ensureSpace(40)
-      const dayDate = new Date(`${day}T12:00:00`)
-      const dayTitle = dayDate.toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'de-DE', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      })
+      const [y, m, d] = day.split('-').map(Number)
+      const dayTitle = new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(
+        locale === 'ru' ? 'ru-RU' : 'de-DE',
+        {
+          timeZone: 'UTC',
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        },
+      )
       doc.font('Bold').fontSize(11).fillColor('#1a1512').text(dayTitle)
       doc.moveDown(0.25)
 
       for (const b of items) {
         ensureSpace(28)
-        const time = `${String(b.startsAt.getHours()).padStart(2, '0')}:${String(b.startsAt.getMinutes()).padStart(2, '0')}`
+        const time = salonTimeStr(b.startsAt)
         const status = t.statuses[b.status] ?? b.status
         const guestTag = b.isGuest ? ` (${t.guest})` : ''
         doc

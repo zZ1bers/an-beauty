@@ -39,22 +39,20 @@ import { useLang } from '../i18n/LanguageContext'
 import { useTheme } from '../theme/ThemeContext'
 import { useAuth } from '../auth/AuthContext'
 import { api, apiDownload, ApiError } from '../lib/api'
-import { dayEnd, localDateTime, todayISO, toDateStr } from '../lib/datetime'
+import { addDays, dayEnd, localDateTime, salonDayOfWeek, todayISO, toDateStr } from '../lib/datetime'
 import { Modal, confirmAction } from '../components/ui/Modal'
 import { useToast } from '../components/ui/Toast'
 import { ImageUpload } from '../components/ui/ImageUpload'
 import { DatePicker } from '../components/booking/DatePicker'
 import './Portal.css'
 
-function nextWorkingDate(workingDays: number[], from = new Date()) {
-  const start = new Date(from)
-  start.setHours(12, 0, 0, 0)
+function nextWorkingDate(workingDays: number[], fromDate = todayISO()) {
+  let cur = fromDate
   for (let i = 0; i < 28; i++) {
-    const d = new Date(start)
-    d.setDate(start.getDate() + i)
-    if (workingDays.includes(d.getDay())) return toDateStr(d)
+    if (workingDays.includes(salonDayOfWeek(cur))) return cur
+    cur = addDays(cur, 1)
   }
-  return toDateStr(start)
+  return fromDate
 }
 
 function walkInBookingError(
@@ -484,7 +482,7 @@ export function AdminPage() {
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date(today)
       d.setDate(today.getDate() - i)
-      const key = d.toISOString().slice(0, 10)
+      const key = toDateStr(d)
       dayKeys.push(key)
       byDay.set(key, {
         date: key.slice(5).replace('-', '/'),
@@ -506,7 +504,7 @@ export function AdminPage() {
 
     for (const c of clients) {
       if (!c.createdAt) continue
-      const key = new Date(c.createdAt).toISOString().slice(0, 10)
+      const key = toDateStr(new Date(c.createdAt))
       const row = byDay.get(key)
       if (row) row.clients += 1
     }
@@ -556,17 +554,19 @@ export function AdminPage() {
 
   const upcomingList = useMemo(() => {
     const now = Date.now()
+    const when = (b: BookingRow) =>
+      b.startsAt
+        ? new Date(b.startsAt).getTime()
+        : b.date && b.time
+          ? localDateTime(b.date, b.time).getTime()
+          : NaN
     return bookings
       .filter((b) => {
         if (b.status !== 'pending' && b.status !== 'confirmed') return false
-        const at = new Date(b.startsAt ?? `${b.date}T${b.time}:00`).getTime()
+        const at = when(b)
         return Number.isFinite(at) && at >= now
       })
-      .sort((a, b) => {
-        const ta = new Date(a.startsAt ?? `${a.date}T${a.time}:00`).getTime()
-        const tb = new Date(b.startsAt ?? `${b.date}T${b.time}:00`).getTime()
-        return ta - tb
-      })
+      .sort((a, b) => when(a) - when(b))
   }, [bookings])
 
   const filteredClients = useMemo(() => {
@@ -924,8 +924,7 @@ export function AdminPage() {
       .then((r) => {
         if (cancelled) return
         setWalkInWorkingDays(r.workingDays)
-        const selected = new Date(`${walkInForm.date}T12:00:00`)
-        if (!r.workingDays.includes(selected.getDay())) {
+        if (!r.workingDays.includes(salonDayOfWeek(walkInForm.date))) {
           setWalkInForm((prev) => ({
             ...prev,
             date: nextWorkingDate(r.workingDays),
@@ -949,7 +948,7 @@ export function AdminPage() {
       setWalkInDayOff(false)
       return
     }
-    if (walkInWorkingDays && !walkInWorkingDays.includes(new Date(`${walkInForm.date}T12:00:00`).getDay())) {
+    if (walkInWorkingDays && !walkInWorkingDays.includes(salonDayOfWeek(walkInForm.date))) {
       setWalkInSlots([])
       setWalkInDayOff(true)
       setWalkInForm((prev) => ({ ...prev, slot: '' }))

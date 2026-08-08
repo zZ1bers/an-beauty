@@ -1,4 +1,5 @@
 import { config } from '../config.js'
+import { SALON_TZ } from '../lib/salonTime.js'
 
 export type BookingLocale = 'ru' | 'de'
 
@@ -17,15 +18,13 @@ export type BookingMessageContext = {
   notes?: string | null
 }
 
-const TZ = 'Europe/Berlin'
-
 export function serviceName(ctx: BookingMessageContext, locale: BookingLocale) {
   return locale === 'de' ? ctx.serviceNameDe : ctx.serviceNameRu
 }
 
 export function formatWhen(startsAt: Date, locale: BookingLocale) {
   const date = new Intl.DateTimeFormat(locale === 'de' ? 'de-DE' : 'ru-RU', {
-    timeZone: TZ,
+    timeZone: SALON_TZ,
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -33,7 +32,7 @@ export function formatWhen(startsAt: Date, locale: BookingLocale) {
   }).format(startsAt)
 
   const time = new Intl.DateTimeFormat(locale === 'de' ? 'de-DE' : 'ru-RU', {
-    timeZone: TZ,
+    timeZone: SALON_TZ,
     hour: '2-digit',
     minute: '2-digit',
     hourCycle: 'h23',
