@@ -85,6 +85,21 @@ export function salonDateStr(instant: Date): string {
   return `${parts.year}-${parts.month}-${parts.day}`
 }
 
+export function salonTimeStr(instant: Date): string {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: SALON_TZ,
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    })
+      .formatToParts(instant)
+      .filter((p) => p.type !== 'literal')
+      .map((p) => [p.type, p.value]),
+  )
+  return `${parts.hour}:${parts.minute}`
+}
+
 /** Sunday=0 … Saturday=6 in salon TZ (matches JS Date#getDay). */
 export function salonDayOfWeek(dateStr: string): number {
   const noon = salonDateTime(dateStr, '12:00')

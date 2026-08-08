@@ -9,7 +9,7 @@ import {
 
 /** Start times every 30 minutes; a longer service blocks consecutive slots via duration overlap */
 const SLOT_STEP_MIN = 30
-const DAY_START = 8 * 60 // 08:00
+const DAY_START = 10 * 60 // 10:00
 const DAY_END = 20 * 60 // 20:00 — last 30‑min start at 19:30
 
 function toMinutes(hhmm: string) {

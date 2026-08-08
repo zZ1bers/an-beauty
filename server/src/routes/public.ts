@@ -8,6 +8,7 @@ import { getAvailableSlots, resolveBookableSlot } from '../services/booking.js'
 import { notifyBookingCreated } from '../services/bookingNotify.js'
 import type { BookingLocale } from '../services/bookingMessages.js'
 import { resolvePromoPrice } from '../services/promo.js'
+import { salonDateStr, salonTimeStr } from '../lib/salonTime.js'
 
 function mapService(s: {
   id: string
@@ -322,8 +323,8 @@ export async function publicRoutes(app: FastifyInstance) {
       booking: {
         id: booking.id,
         startsAt: booking.startsAt.toISOString(),
-        date: booking.startsAt.toISOString().slice(0, 10),
-        time: booking.startsAt.toISOString().slice(11, 16),
+        date: salonDateStr(booking.startsAt),
+        time: salonTimeStr(booking.startsAt),
         status: booking.status.toLowerCase(),
         service: {
           id: booking.service.id,

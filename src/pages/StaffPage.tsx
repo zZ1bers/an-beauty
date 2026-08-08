@@ -55,9 +55,9 @@ const DAY_LABELS_RU = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
 const DAY_LABELS_DE = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 const HEAD_RU = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const HEAD_DE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
-/** 08:00–19:30 start times (30 min cells; day ends 20:00) */
-const SLOT_TIMES = Array.from({ length: 24 }, (_, i) => {
-  const total = 8 * 60 + i * 30
+/** 10:00–19:30 start times (30 min cells; day ends 20:00) */
+const SLOT_TIMES = Array.from({ length: 20 }, (_, i) => {
+  const total = 10 * 60 + i * 30
   const h = Math.floor(total / 60)
   const m = total % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
@@ -127,7 +127,7 @@ export function StaffPage() {
           const existing = s.workingHours.find((h) => h.dayOfWeek === dayOfWeek)
           return {
             dayOfWeek,
-            startTime: existing?.startTime ?? '08:00',
+            startTime: existing?.startTime ?? '10:00',
             endTime: existing?.endTime ?? '20:00',
             enabled: !!existing,
           }
@@ -744,7 +744,7 @@ export function StaffPage() {
                 {WEEK_ORDER.map((dayOfWeek) => {
                   const h = hoursDraft.find((x) => x.dayOfWeek === dayOfWeek) ?? {
                     dayOfWeek,
-                    startTime: '08:00',
+                    startTime: '10:00',
                     endTime: '20:00',
                     enabled: false,
                   }
@@ -762,7 +762,7 @@ export function StaffPage() {
                                   ...prev,
                                   {
                                     dayOfWeek,
-                                    startTime: '08:00',
+                                    startTime: '10:00',
                                     endTime: '20:00',
                                     enabled: e.target.checked,
                                   },

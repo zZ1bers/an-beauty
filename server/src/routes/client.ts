@@ -7,6 +7,7 @@ import { resolveBookableSlot } from '../services/booking.js'
 import { notifyBookingCreated } from '../services/bookingNotify.js'
 import { resolvePromoPrice } from '../services/promo.js'
 import type { BookingLocale } from '../services/bookingMessages.js'
+import { salonDateStr, salonTimeStr } from '../lib/salonTime.js'
 
 function mapBooking(b: {
   id: string
@@ -31,8 +32,8 @@ function mapBooking(b: {
     id: b.id,
     startsAt: b.startsAt.toISOString(),
     endsAt: b.endsAt.toISOString(),
-    date: b.startsAt.toISOString().slice(0, 10),
-    time: b.startsAt.toISOString().slice(11, 16),
+    date: salonDateStr(b.startsAt),
+    time: salonTimeStr(b.startsAt),
     status: b.status.toLowerCase(),
     notes: b.notes,
     price: Number(b.priceSnapshot),

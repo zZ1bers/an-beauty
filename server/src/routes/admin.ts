@@ -417,7 +417,7 @@ export async function adminRoutes(app: FastifyInstance) {
             workingHours: {
               create: [1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({
                 dayOfWeek,
-                startTime: '08:00',
+                startTime: '10:00',
                 endTime: '20:00',
               })),
             },

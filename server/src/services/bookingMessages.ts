@@ -36,7 +36,7 @@ export function formatWhen(startsAt: Date, locale: BookingLocale) {
     timeZone: TZ,
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false,
+    hourCycle: 'h23',
   }).format(startsAt)
 
   return { date, time, short: `${date}, ${time}` }

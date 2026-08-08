@@ -191,8 +191,8 @@ export const masters: Master[] = [
   },
 ]
 
-export const timeSlots = Array.from({ length: 24 }, (_, i) => {
-  const total = 8 * 60 + i * 30
+export const timeSlots = Array.from({ length: 20 }, (_, i) => {
+  const total = 10 * 60 + i * 30
   const h = Math.floor(total / 60)
   const m = total % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
