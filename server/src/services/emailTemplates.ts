@@ -478,11 +478,11 @@ export function buildBookingMasterNotifyEmail(
   const copy =
     locale === 'ru'
       ? {
-          subject: 'Новая запись клиента · AN.Beauty',
+          subject: 'Подтверждение: новая запись · AN.Beauty',
           preheader: `${clientName}: ${input.serviceName}, ${input.whenLabel}`,
-          eyebrow: 'Новый клиент',
+          eyebrow: 'Запись подтверждена',
           greeting: `Здравствуйте, ${name}`,
-          lead: 'На сайте появилась новая запись на ваше имя. Детали ниже.',
+          lead: 'Новая запись на ваше имя подтверждена. Детали ниже.',
           client: 'Клиент',
           phone: 'Телефон',
           email: 'Email',
@@ -494,11 +494,11 @@ export function buildBookingMasterNotifyEmail(
           team: 'AN.Beauty',
         }
       : {
-          subject: 'Neuer Kundentermin · AN.Beauty',
+          subject: 'Bestätigung: neuer Termin · AN.Beauty',
           preheader: `${clientName}: ${input.serviceName}, ${input.whenLabel}`,
-          eyebrow: 'Neuer Termin',
+          eyebrow: 'Termin bestätigt',
           greeting: `Guten Tag, ${name}`,
-          lead: 'Über die Website wurde ein neuer Termin für Sie gebucht. Details unten.',
+          lead: 'Ein neuer Termin für Sie wurde bestätigt. Details unten.',
           client: 'Kundin / Kunde',
           phone: 'Telefon',
           email: 'E-Mail',

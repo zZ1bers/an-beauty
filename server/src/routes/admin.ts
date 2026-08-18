@@ -5,6 +5,8 @@ import { z } from 'zod'
 import { prisma } from '../db.js'
 import { requireRole } from '../plugins/auth.js'
 import { getAdminStats, resolveBookableSlot } from '../services/booking.js'
+import { notifyBookingCreated } from '../services/bookingNotify.js'
+import type { BookingLocale } from '../services/bookingMessages.js'
 import { buildMonthlyReportPdf } from '../services/monthlyReport.js'
 import { resolvePromoPrice } from '../services/promo.js'
 import { salonDateStr, salonTimeStr } from '../lib/salonTime.js'
@@ -622,6 +624,12 @@ export async function adminRoutes(app: FastifyInstance) {
 
     const priced = await resolvePromoPrice(service.id, service.price)
 
+    const master = await prisma.masterProfile.findUnique({
+      where: { id: body.data.masterId },
+      include: { user: true },
+    })
+    if (!master) return reply.status(404).send({ error: 'Master not found' })
+
     const booking = await prisma.booking.create({
       data: {
         clientId: null,
@@ -641,6 +649,26 @@ export async function adminRoutes(app: FastifyInstance) {
         service: true,
         master: { include: { user: { select: { firstName: true, lastName: true } } } },
       },
+    })
+
+    await notifyBookingCreated({
+      bookingId: booking.id,
+      locale: (master.user.locale ?? 'de') as BookingLocale,
+      clientUserId: null,
+      clientEmail: null,
+      clientPhone: body.data.phone?.trim() || null,
+      clientFirstName: body.data.firstName.trim(),
+      clientLastName: body.data.lastName.trim(),
+      masterUserId: master.userId,
+      masterEmail: master.user.email,
+      masterLocale: (master.user.locale ?? 'de') as BookingLocale,
+      masterFirstName: master.user.firstName,
+      masterLastName: master.user.lastName,
+      serviceNameRu: service.nameRu,
+      serviceNameDe: service.nameDe,
+      startsAt,
+      price: Number(priced.price),
+      notes: body.data.notes?.trim() || null,
     })
 
     return reply.status(201).send({
