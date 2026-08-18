@@ -1,10 +1,14 @@
 import { BookingStatus } from '@prisma/client'
+import { config } from '../config.js'
 import { prisma } from '../db.js'
 import {
   buildClientReminderSms,
+  formatWhen,
+  serviceName,
   type BookingLocale,
   type BookingMessageContext,
 } from './bookingMessages.js'
+import { sendBookingClientReminderEmail } from './mail.js'
 import { sendSms } from './sms.js'
 
 const INTERVAL_MS = 15 * 60 * 1000
@@ -33,42 +37,75 @@ export async function sendDueBookingReminders() {
 
   for (const b of rows) {
     const phone = b.client?.user.phone || b.guestPhone
-    if (!phone) {
-      await prisma.booking.update({
-        where: { id: b.id },
-        data: { reminderSmsSentAt: new Date() },
-      })
-      continue
-    }
-
+    const email = b.client?.user.email || null
     const locale = (b.client?.user.locale ?? 'ru') as BookingLocale
     const ctx: BookingMessageContext = {
       locale,
       clientFirstName: b.client?.user.firstName ?? b.guestFirstName ?? '',
       clientLastName: b.client?.user.lastName ?? b.guestLastName ?? '',
       clientPhone: phone,
+      clientEmail: email,
       masterFirstName: b.master.user.firstName,
       masterLastName: b.master.user.lastName,
       serviceNameRu: b.service.nameRu,
       serviceNameDe: b.service.nameDe,
       startsAt: b.startsAt,
+      price: Number(b.priceSnapshot),
+      notes: b.notes,
     }
 
-    try {
-      const result = await sendSms({ to: phone, body: buildClientReminderSms(ctx) })
-      // Mark done on success, missing config, or bad number — retry only on provider failures
-      const done =
-        result.ok ||
-        ('reason' in result &&
-          (result.reason === 'SMS_NOT_CONFIGURED' || result.reason === 'INVALID_PHONE'))
-      if (done) {
-        await prisma.booking.update({
-          where: { id: b.id },
-          data: { reminderSmsSentAt: new Date() },
+    const masterName = `${b.master.user.firstName} ${b.master.user.lastName}`.trim()
+    const whenLabel = formatWhen(b.startsAt, locale).short
+    const priceLabel = `${Number(b.priceSnapshot).toFixed(2)} €`
+
+    let emailOk = !email
+    let smsOk = !phone
+
+    if (email) {
+      try {
+        await sendBookingClientReminderEmail({
+          to: email,
+          locale,
+          clientFirstName: ctx.clientFirstName,
+          clientLastName: ctx.clientLastName,
+          masterName,
+          serviceName: serviceName(ctx, locale),
+          whenLabel,
+          priceLabel,
+          notes: b.notes,
         })
+        emailOk = true
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        console.error(`[reminders] email booking ${b.id}:`, e)
+        // Don't block forever when SMTP is off
+        if (config.isDev || msg.includes('SMTP_NOT_CONFIGURED')) emailOk = true
       }
-    } catch (e) {
-      console.error(`[reminders] booking ${b.id}:`, e)
+    }
+
+    if (phone) {
+      try {
+        const result = await sendSms({ to: phone, body: buildClientReminderSms(ctx) })
+        smsOk =
+          result.ok ||
+          ('reason' in result &&
+            (result.reason === 'SMS_NOT_CONFIGURED' || result.reason === 'INVALID_PHONE'))
+      } catch (e) {
+        console.error(`[reminders] sms booking ${b.id}:`, e)
+      }
+    }
+
+    // No contact channels → mark done so we don't retry forever
+    if (!email && !phone) {
+      emailOk = true
+      smsOk = true
+    }
+
+    if (emailOk && smsOk) {
+      await prisma.booking.update({
+        where: { id: b.id },
+        data: { reminderSmsSentAt: new Date() },
+      })
     }
   }
 }
@@ -77,8 +114,7 @@ export function startReminderScheduler() {
   const tick = () => {
     void sendDueBookingReminders().catch((e) => console.error('[reminders] tick:', e))
   }
-  // First run shortly after boot, then every 15 minutes
   setTimeout(tick, 20_000)
   setInterval(tick, INTERVAL_MS)
-  console.log('[reminders] day-before SMS scheduler started (every 15 min)')
+  console.log('[reminders] day-before email+SMS scheduler started (every 15 min)')
 }

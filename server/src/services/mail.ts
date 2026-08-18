@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer'
 import { config } from '../config.js'
 import {
   buildBookingClientConfirmEmail,
+  buildBookingClientReminderEmail,
   buildBookingMasterNotifyEmail,
   buildPasswordResetEmail,
 } from './emailTemplates.js'
@@ -67,6 +68,25 @@ export async function sendBookingClientConfirmEmail(opts: {
   notes?: string | null
 }) {
   const { subject, html, text } = buildBookingClientConfirmEmail({
+    ...opts,
+    siteUrl: config.frontendUrl,
+    address: config.salon.addressShort,
+  })
+  return sendMail({ to: opts.to, subject, html, text })
+}
+
+export async function sendBookingClientReminderEmail(opts: {
+  to: string
+  locale: 'ru' | 'de'
+  clientFirstName: string
+  clientLastName: string
+  masterName: string
+  serviceName: string
+  whenLabel: string
+  priceLabel?: string | null
+  notes?: string | null
+}) {
+  const { subject, html, text } = buildBookingClientReminderEmail({
     ...opts,
     siteUrl: config.frontendUrl,
     address: config.salon.addressShort,

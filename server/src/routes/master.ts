@@ -230,10 +230,31 @@ export async function masterRoutes(app: FastifyInstance) {
       .safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: 'Invalid body' })
 
+    const normalizeHm = (raw: string) => {
+      const [h = '0', m = '0'] = raw.trim().split(':')
+      return `${String(Math.min(23, Math.max(0, Number(h) || 0))).padStart(2, '0')}:${String(Math.min(59, Math.max(0, Number(m) || 0))).padStart(2, '0')}`
+    }
+
+    const cleaned = body.data.workingHours
+      .map((h) => ({
+        dayOfWeek: h.dayOfWeek,
+        startTime: normalizeHm(h.startTime),
+        endTime: normalizeHm(h.endTime),
+      }))
+      .filter((h) => {
+        const [sh, sm] = h.startTime.split(':').map(Number)
+        const [eh, em] = h.endTime.split(':').map(Number)
+        return sh * 60 + sm < eh * 60 + em
+      })
+
+    // Dedupe by dayOfWeek (last wins)
+    const byDay = new Map<number, (typeof cleaned)[number]>()
+    for (const h of cleaned) byDay.set(h.dayOfWeek, h)
+
     await prisma.$transaction([
       prisma.workingHours.deleteMany({ where: { masterId } }),
       prisma.workingHours.createMany({
-        data: body.data.workingHours.map((h) => ({ ...h, masterId })),
+        data: [...byDay.values()].map((h) => ({ ...h, masterId })),
       }),
     ])
 

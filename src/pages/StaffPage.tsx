@@ -56,7 +56,7 @@ const DAY_LABELS_DE = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 const HEAD_RU = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const HEAD_DE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 /** 10:00–19:30 start times (30 min cells; day ends 20:00) */
-const SLOT_TIMES = Array.from({ length: 20 }, (_, i) => {
+const SALON_SLOT_TIMES = Array.from({ length: 20 }, (_, i) => {
   const total = 10 * 60 + i * 30
   const h = Math.floor(total / 60)
   const m = total % 60
@@ -64,6 +64,16 @@ const SLOT_TIMES = Array.from({ length: 20 }, (_, i) => {
 })
 
 const SLOT_MIN = 30
+
+function normalizeHm(raw: string) {
+  const [h = '0', m = '0'] = raw.trim().split(':')
+  return `${String(Math.min(23, Math.max(0, Number(h) || 0))).padStart(2, '0')}:${String(Math.min(59, Math.max(0, Number(m) || 0))).padStart(2, '0')}`
+}
+
+function toMin(hhmm: string) {
+  const [h, m] = normalizeHm(hhmm).split(':').map(Number)
+  return h * 60 + m
+}
 
 async function removeTimeOff(id: string) {
   await api(`/master/time-off/${id}/remove`, { method: 'POST', body: JSON.stringify({}) })
@@ -127,8 +137,8 @@ export function StaffPage() {
           const existing = s.workingHours.find((h) => h.dayOfWeek === dayOfWeek)
           return {
             dayOfWeek,
-            startTime: existing?.startTime ?? '10:00',
-            endTime: existing?.endTime ?? '20:00',
+            startTime: normalizeHm(existing?.startTime ?? '10:00'),
+            endTime: normalizeHm(existing?.endTime ?? '20:00'),
             enabled: !!existing,
           }
         }),
@@ -161,6 +171,18 @@ export function StaffPage() {
     return schedule.workingHours.some((w) => w.dayOfWeek === d)
   }, [schedule, date])
 
+  const daySlotTimes = useMemo(() => {
+    const d = salonDayOfWeek(date)
+    const h = schedule?.workingHours.find((w) => w.dayOfWeek === d)
+    if (!h) return [] as string[]
+    const start = Math.max(10 * 60, toMin(h.startTime))
+    const end = Math.min(20 * 60, toMin(h.endTime))
+    return SALON_SLOT_TIMES.filter((t) => {
+      const m = toMin(t)
+      return m >= start && m + SLOT_MIN <= end
+    })
+  }, [schedule, date])
+
   const slotStates = useMemo(() => {
     const map = new Map<
       string,
@@ -173,11 +195,10 @@ export function StaffPage() {
       const e = new Date(o.endsAt)
       const ds = dayStart(date)
       const de = dayEnd(date)
-      // full-day style: covers almost entire day
       return s <= ds && e >= de
     })
 
-    for (const time of SLOT_TIMES) {
+    for (const time of daySlotTimes) {
       const slotStart = localDateTime(date, time)
       const slotEnd = new Date(slotStart.getTime() + SLOT_MIN * 60_000)
 
@@ -205,7 +226,7 @@ export function StaffPage() {
       }
     }
     return map
-  }, [bookings, schedule, date])
+  }, [bookings, schedule, date, daySlotTimes])
 
   const fullDayOff = useMemo(() => {
     const offs = schedule?.timeOffs ?? []
@@ -395,7 +416,11 @@ export function StaffPage() {
         body: JSON.stringify({
           workingHours: hoursDraft
             .filter((h) => h.enabled)
-            .map(({ dayOfWeek, startTime, endTime }) => ({ dayOfWeek, startTime, endTime })),
+            .map(({ dayOfWeek, startTime, endTime }) => ({
+              dayOfWeek,
+              startTime: normalizeHm(startTime),
+              endTime: normalizeHm(endTime),
+            })),
         }),
       })
       toast.push(t.admin.save)
@@ -516,7 +541,7 @@ export function StaffPage() {
                   <h2>{t.staff.today}</h2>
                 </div>
                 <div className="portal__slots">
-                  {SLOT_TIMES.map((slot) => {
+                  {daySlotTimes.map((slot) => {
                     const state = slotStates.get(slot) ?? { kind: 'open' as const }
                     const closed =
                       state.kind === 'busy' || state.kind === 'blocked' || state.kind === 'dayoff'
@@ -780,29 +805,55 @@ export function StaffPage() {
                       </label>
                       <input
                         type="time"
+                        step={1800}
                         disabled={!h.enabled}
                         value={h.startTime}
                         onChange={(e) =>
-                          setHoursDraft((prev) =>
-                            prev.map((x) =>
-                              x.dayOfWeek === dayOfWeek
-                                ? { ...x, startTime: e.target.value }
-                                : x,
-                            ),
-                          )
+                          setHoursDraft((prev) => {
+                            const next = normalizeHm(e.target.value)
+                            const exists = prev.some((x) => x.dayOfWeek === dayOfWeek)
+                            if (!exists) {
+                              return [
+                                ...prev,
+                                {
+                                  dayOfWeek,
+                                  startTime: next,
+                                  endTime: '20:00',
+                                  enabled: true,
+                                },
+                              ]
+                            }
+                            return prev.map((x) =>
+                              x.dayOfWeek === dayOfWeek ? { ...x, startTime: next } : x,
+                            )
+                          })
                         }
                       />
                       <span className="staff-week__dash">–</span>
                       <input
                         type="time"
+                        step={1800}
                         disabled={!h.enabled}
                         value={h.endTime}
                         onChange={(e) =>
-                          setHoursDraft((prev) =>
-                            prev.map((x) =>
-                              x.dayOfWeek === dayOfWeek ? { ...x, endTime: e.target.value } : x,
-                            ),
-                          )
+                          setHoursDraft((prev) => {
+                            const next = normalizeHm(e.target.value)
+                            const exists = prev.some((x) => x.dayOfWeek === dayOfWeek)
+                            if (!exists) {
+                              return [
+                                ...prev,
+                                {
+                                  dayOfWeek,
+                                  startTime: '10:00',
+                                  endTime: next,
+                                  enabled: true,
+                                },
+                              ]
+                            }
+                            return prev.map((x) =>
+                              x.dayOfWeek === dayOfWeek ? { ...x, endTime: next } : x,
+                            )
+                          })
                         }
                       />
                     </div>

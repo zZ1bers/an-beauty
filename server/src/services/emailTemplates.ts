@@ -401,6 +401,72 @@ export function buildBookingClientConfirmEmail(input: BookingEmailShared) {
   })
 }
 
+export function buildBookingClientReminderEmail(input: BookingEmailShared) {
+  const { locale, siteUrl } = input
+  const name = input.clientFirstName?.trim() || (locale === 'ru' ? 'гость' : 'Gast')
+  const copy =
+    locale === 'ru'
+      ? {
+          subject: 'Напоминание: завтра у вас термин · AN.Beauty',
+          preheader: `Завтра: ${input.serviceName}, ${input.whenLabel}`,
+          eyebrow: 'Напоминание о записи',
+          greeting: `Здравствуйте, ${name}`,
+          lead: 'Напоминаем: завтра у вас термин в AN.Beauty. Пожалуйста, не забудьте — мы вас ждём.',
+          service: 'Услуга',
+          when: 'Дата и время',
+          master: 'Мастер',
+          address: 'Адрес',
+          price: 'Стоимость',
+          notes: 'Комментарий',
+          note: 'Если нужно перенести или отменить — напишите нам или зайдите в личный кабинет.',
+          cta: 'Личный кабинет',
+          help: 'До завтра в студии. Вопросы — просто ответьте на это письмо.',
+          team: 'С уважением,\nкоманда AN.Beauty',
+        }
+      : {
+          subject: 'Erinnerung: morgen haben Sie einen Termin · AN.Beauty',
+          preheader: `Morgen: ${input.serviceName}, ${input.whenLabel}`,
+          eyebrow: 'Terminerinnerung',
+          greeting: `Guten Tag, ${name}`,
+          lead: 'Erinnerung: morgen haben Sie einen Termin bei AN.Beauty. Bitte nicht vergessen — wir freuen uns auf Sie.',
+          service: 'Leistung',
+          when: 'Datum & Uhrzeit',
+          master: 'Meister/in',
+          address: 'Adresse',
+          price: 'Preis',
+          notes: 'Hinweis',
+          note: 'Zum Verschieben oder Absagen schreiben Sie uns oder nutzen Sie Ihr Konto.',
+          cta: 'Zum Konto',
+          help: 'Bis morgen im Atelier. Bei Fragen antworten Sie einfach auf diese E-Mail.',
+          team: 'Mit freundlichen Grüßen\nIhr AN.Beauty Team',
+        }
+
+  const rows = [
+    { label: copy.service, value: input.serviceName },
+    { label: copy.when, value: input.whenLabel },
+    { label: copy.master, value: input.masterName },
+    { label: copy.address, value: input.address },
+  ]
+  if (input.priceLabel) rows.push({ label: copy.price, value: input.priceLabel })
+  if (input.notes?.trim()) rows.push({ label: copy.notes, value: input.notes.trim() })
+
+  return emailShell({
+    locale,
+    siteUrl,
+    subject: copy.subject,
+    preheader: copy.preheader,
+    eyebrow: copy.eyebrow,
+    greeting: copy.greeting,
+    lead: copy.lead,
+    rows,
+    note: copy.note,
+    ctaLabel: copy.cta,
+    ctaHref: `${siteUrl}/cabinet`,
+    help: copy.help,
+    team: copy.team,
+  })
+}
+
 export function buildBookingMasterNotifyEmail(
   input: BookingEmailShared & { masterLocale: 'ru' | 'de'; staffPath?: string },
 ) {

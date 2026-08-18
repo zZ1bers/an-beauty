@@ -19,13 +19,21 @@ const DAY_END = 20 * 60 // 20:00 — last 30‑min start at 19:30
 
 function toMinutes(hhmm: string) {
   const [h, m] = hhmm.split(':').map(Number)
-  return h * 60 + m
+  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0)
 }
 
 function fromMinutes(total: number) {
   const h = Math.floor(total / 60)
   const m = total % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+/** Normalize "9:00", "09:00:00" → "09:00" */
+export function normalizeHm(raw: string) {
+  const [h = '0', m = '0'] = raw.trim().split(':')
+  const hh = Math.min(23, Math.max(0, Number(h) || 0))
+  const mm = Math.min(59, Math.max(0, Number(m) || 0))
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
 }
 
 export async function getAvailableSlots(masterId: string, dateStr: string, durationMin: number) {
@@ -57,8 +65,13 @@ export async function getAvailableSlots(masterId: string, dateStr: string, durat
     }),
   ])
 
-  const workStart = Math.max(DAY_START, toMinutes(hours.startTime))
-  const workEnd = Math.min(DAY_END, toMinutes(hours.endTime))
+  // Master's own hours, clipped to salon open window 10:00–20:00
+  const masterStart = toMinutes(normalizeHm(hours.startTime))
+  const masterEnd = toMinutes(normalizeHm(hours.endTime))
+  const workStart = Math.max(DAY_START, masterStart)
+  const workEnd = Math.min(DAY_END, masterEnd)
+  if (workEnd - workStart < durationMin) return { slots: [] as string[], dayOff: false }
+
   const slots: string[] = []
 
   for (let t = workStart; t + durationMin <= workEnd; t += SLOT_STEP_MIN) {
@@ -121,9 +134,14 @@ export async function assertWithinWorkingHours(masterId: string, startsAt: Date,
     throw new Error('DAY_OFF')
   }
 
-  const workStart = salonDateTime(dateStr, fromMinutes(toMinutes(hours.startTime)))
-  const workEnd = salonDateTime(dateStr, fromMinutes(toMinutes(hours.endTime)))
-  if (startsAt < workStart || endsAt > workEnd) {
+  const workStart = salonDateTime(dateStr, normalizeHm(hours.startTime))
+  const workEnd = salonDateTime(dateStr, normalizeHm(hours.endTime))
+  // Also respect salon hard window 10:00–20:00
+  const salonStart = salonDateTime(dateStr, fromMinutes(DAY_START))
+  const salonEnd = salonDateTime(dateStr, fromMinutes(DAY_END))
+  const windowStart = workStart > salonStart ? workStart : salonStart
+  const windowEnd = workEnd < salonEnd ? workEnd : salonEnd
+  if (startsAt < windowStart || endsAt > windowEnd) {
     throw new Error('OUTSIDE_HOURS')
   }
 }
