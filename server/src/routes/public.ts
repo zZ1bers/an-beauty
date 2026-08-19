@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto'
 import { BookingStatus, Role } from '@prisma/client'
 import { z } from 'zod'
 import { prisma } from '../db.js'
-import { getAvailableSlots, resolveBookableSlot } from '../services/booking.js'
+import { getAvailabilityRange, getAvailableSlots, resolveBookableSlot } from '../services/booking.js'
 import { notifyBookingCreated } from '../services/bookingNotify.js'
 import type { BookingLocale } from '../services/bookingMessages.js'
 import { resolvePromoPrice } from '../services/promo.js'
@@ -174,6 +174,39 @@ export async function publicRoutes(app: FastifyInstance) {
 
     const { slots, dayOff } = await getAvailableSlots(id, q.data.date, duration)
     return { date: q.data.date, slots, dayOff }
+  })
+
+  /** Days with no free slots in a range (for calendar red highlight). */
+  app.get('/masters/:id/availability', async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const q = z
+      .object({
+        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        serviceId: z.string().optional(),
+        duration: z.coerce.number().int().min(15).max(480).optional(),
+      })
+      .safeParse(request.query)
+    if (!q.success) return reply.status(400).send({ error: 'from=&to=YYYY-MM-DD required' })
+    if (q.data.to < q.data.from) {
+      return reply.status(400).send({ error: 'to must be >= from' })
+    }
+
+    // Cap range to avoid abuse (~14 months)
+    const fromMs = Date.parse(`${q.data.from}T00:00:00Z`)
+    const toMs = Date.parse(`${q.data.to}T00:00:00Z`)
+    if (!Number.isFinite(fromMs) || !Number.isFinite(toMs) || toMs - fromMs > 400 * 86_400_000) {
+      return reply.status(400).send({ error: 'Range too large (max ~400 days)' })
+    }
+
+    let duration = q.data.duration ?? 60
+    if (q.data.serviceId) {
+      const service = await prisma.service.findUnique({ where: { id: q.data.serviceId } })
+      if (!service) return reply.status(404).send({ error: 'Service not found' })
+      duration = service.durationMin
+    }
+
+    return getAvailabilityRange(id, q.data.from, q.data.to, duration)
   })
 
   app.get('/promos/active', async () => {

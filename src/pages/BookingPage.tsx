@@ -649,6 +649,9 @@ export function BookingPage() {
                     withMasterLabel={t.booking.withMaster}
                     workingDays={workingDays}
                     closedLabel={t.booking.closedDay}
+                    noSlotsLabel={t.booking.dayFull}
+                    masterId={masterId || undefined}
+                    serviceId={serviceId || undefined}
                   />
                   <div className="booking__slot-grid">
                     {slots.length === 0 && <p className="booking__no-slots">{t.booking.noSlots}</p>}

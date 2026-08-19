@@ -389,6 +389,10 @@ export function AdminQuickBook({ masters, services, onCreated }: Props) {
             withMasterLabel={t.booking.withMaster}
             workingDays={workingDays}
             closedLabel={t.booking.closedDay}
+            noSlotsLabel={t.booking.dayFull}
+            masterId={masterId}
+            serviceId={serviceId || undefined}
+            durationMin={serviceId ? undefined : 30}
           />
           {dayOff ? (
             <p className="admin__slot-empty">{t.admin.closedDay}</p>

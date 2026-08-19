@@ -1,6 +1,7 @@
 import { BookingStatus } from '@prisma/client'
 import { prisma } from '../db.js'
 import {
+  addCalendarDays,
   salonDateStr,
   salonDateTime,
   salonDayBounds,
@@ -88,6 +89,77 @@ export async function getAvailableSlots(masterId: string, dateStr: string, durat
   }
 
   return { slots, dayOff: false }
+}
+
+/**
+ * Which days in [from, to] have at least one free slot for this master/duration.
+ * Loads bookings + time-offs once for the whole range.
+ */
+export async function getAvailabilityRange(
+  masterId: string,
+  fromStr: string,
+  toStr: string,
+  durationMin: number,
+) {
+  const hoursRows = await prisma.workingHours.findMany({ where: { masterId } })
+  const hoursByDow = new Map(hoursRows.map((h) => [h.dayOfWeek, h]))
+
+  const rangeStart = salonDateTime(fromStr, '00:00')
+  const rangeEnd = salonDateTime(addCalendarDays(toStr, 1), '00:00')
+
+  const [bookings, timeOffs] = await Promise.all([
+    prisma.booking.findMany({
+      where: {
+        masterId,
+        status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
+        startsAt: { lt: rangeEnd },
+        endsAt: { gt: rangeStart },
+      },
+    }),
+    prisma.timeOff.findMany({
+      where: {
+        masterId,
+        startsAt: { lt: rangeEnd },
+        endsAt: { gt: rangeStart },
+      },
+    }),
+  ])
+
+  const now = new Date()
+  const unavailable: string[] = []
+  let cur = fromStr
+  while (cur <= toStr) {
+    const dow = salonDayOfWeek(cur)
+    const hours = hoursByDow.get(dow)
+    if (!hours) {
+      unavailable.push(cur)
+    } else {
+      const masterStart = toMinutes(normalizeHm(hours.startTime))
+      const masterEnd = toMinutes(normalizeHm(hours.endTime))
+      const workStart = Math.max(DAY_START, masterStart)
+      const workEnd = Math.min(DAY_END, masterEnd)
+      let hasSlot = false
+      if (workEnd - workStart >= durationMin) {
+        for (let t = workStart; t + durationMin <= workEnd; t += SLOT_STEP_MIN) {
+          const label = fromMinutes(t)
+          const slotStart = salonDateTime(cur, label)
+          const slotEnd = new Date(slotStart.getTime() + durationMin * 60_000)
+          if (slotStart <= now) continue
+          const busy =
+            bookings.some((b) => b.startsAt < slotEnd && b.endsAt > slotStart) ||
+            timeOffs.some((o) => o.startsAt < slotEnd && o.endsAt > slotStart)
+          if (!busy) {
+            hasSlot = true
+            break
+          }
+        }
+      }
+      if (!hasSlot) unavailable.push(cur)
+    }
+    cur = addCalendarDays(cur, 1)
+  }
+
+  return { from: fromStr, to: toStr, unavailable }
 }
 
 export async function resolveBookableSlot(input: {

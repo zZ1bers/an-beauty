@@ -105,6 +105,10 @@
   color: #fff;
 }
 
+.date-picker__day.is-selected.is-full {
+  opacity: 1;
+}
+
 .date-picker__day.is-today:not(.is-selected):not(.is-closed) {
   border-color: rgba(175, 210, 117, 0.65);
   background: rgba(175, 210, 117, 0.16);
@@ -137,6 +141,35 @@
 .date-picker__day.is-closed .date-picker__weekday,
 .date-picker__day.is-closed .date-picker__month {
   color: rgba(244, 239, 233, 0.28);
+}
+
+/* Working day with no free slots — coral red */
+.date-picker__day.is-full {
+  background: rgba(231, 113, 125, 0.28);
+  border-color: rgba(231, 113, 125, 0.55);
+  color: #fff;
+  opacity: 1;
+}
+
+.date-picker__day.is-full .date-picker__weekday,
+.date-picker__day.is-full .date-picker__month {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.date-picker__day.is-full .date-picker__num {
+  color: #fff;
+}
+
+html[data-theme='light'] .date-picker__day.is-full {
+  background: rgba(231, 113, 125, 0.22);
+  border-color: rgba(212, 90, 103, 0.55);
+  color: var(--coral-deep, #d45a67);
+}
+
+html[data-theme='light'] .date-picker__day.is-full .date-picker__weekday,
+html[data-theme='light'] .date-picker__day.is-full .date-picker__month,
+html[data-theme='light'] .date-picker__day.is-full .date-picker__num {
+  color: var(--coral-deep, #d45a67);
 }
 
 .date-picker__weekday {
@@ -228,6 +261,19 @@
   border-color: transparent;
   text-decoration: line-through;
   text-decoration-color: var(--text-dim);
+}
+
+.date-picker__cell.is-full {
+  background: rgba(231, 113, 125, 0.32);
+  color: #fff;
+  border-color: rgba(231, 113, 125, 0.5);
+  text-decoration: none;
+}
+
+html[data-theme='light'] .date-picker__cell.is-full {
+  background: rgba(231, 113, 125, 0.2);
+  color: var(--coral-deep, #d45a67);
+  border-color: rgba(212, 90, 103, 0.45);
 }
 
 .date-picker__cell.is-today:not(.is-selected):not(.is-closed) {

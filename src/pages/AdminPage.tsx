@@ -2289,6 +2289,9 @@ export function AdminPage() {
                 withMasterLabel={t.booking.withMaster}
                 workingDays={walkInWorkingDays}
                 closedLabel={t.admin.closedDay}
+                noSlotsLabel={t.booking.dayFull}
+                masterId={walkInForm.masterId || undefined}
+                serviceId={walkInForm.serviceId || undefined}
               />
               <span>{t.admin.pickSlot}</span>
               {walkInDayOff ? (
