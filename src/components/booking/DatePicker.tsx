@@ -33,6 +33,8 @@ export function DatePicker({
   const stripRef = useRef<HTMLDivElement>(null)
   const [monthCursor, setMonthCursor] = useState(() => startOfMonth(value))
   const [calOpen, setCalOpen] = useState(false)
+  /** Grow as user scrolls right — was hard-capped at 21 days */
+  const [daysAhead, setDaysAhead] = useState(60)
 
   const workingSet = useMemo(() => {
     if (!workingDays) return null
@@ -45,8 +47,8 @@ export function DatePicker({
   }
 
   const stripDays = useMemo(() => {
-    return Array.from({ length: 21 }, (_, i) => addDays(today, i))
-  }, [today])
+    return Array.from({ length: daysAhead }, (_, i) => addDays(today, i))
+  }, [today, daysAhead])
 
   useEffect(() => {
     setMonthCursor(startOfMonth(value))
@@ -58,6 +60,18 @@ export function DatePicker({
     const active = el.querySelector<HTMLElement>('.date-picker__day.is-selected')
     active?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
   }, [value])
+
+  useEffect(() => {
+    const el = stripRef.current
+    if (!el) return
+    const onScroll = () => {
+      if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 160) {
+        setDaysAhead((n) => Math.min(n + 45, 400))
+      }
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
 
   const weekdays = locale === 'ru' ? WEEKDAYS_RU : WEEKDAYS_DE
 
@@ -73,7 +87,10 @@ export function DatePicker({
   const calendarCells = useMemo(() => monthGrid(monthCursor), [monthCursor])
 
   const scrollStrip = (dir: -1 | 1) => {
-    stripRef.current?.scrollBy({ left: dir * 180, behavior: 'smooth' })
+    if (dir === 1) setDaysAhead((n) => Math.min(n + 30, 400))
+    requestAnimationFrame(() => {
+      stripRef.current?.scrollBy({ left: dir * 180, behavior: 'smooth' })
+    })
   }
 
   const selectDay = (dateStr: string) => {

@@ -4,6 +4,7 @@ import {
   Users,
   Sparkles,
   CalendarRange,
+  CalendarPlus,
   Megaphone,
   Pencil,
   Trash2,
@@ -44,6 +45,7 @@ import { Modal, confirmAction } from '../components/ui/Modal'
 import { useToast } from '../components/ui/Toast'
 import { ImageUpload } from '../components/ui/ImageUpload'
 import { DatePicker } from '../components/booking/DatePicker'
+import { AdminQuickBook } from '../components/admin/AdminQuickBook'
 import './Portal.css'
 
 function nextWorkingDate(workingDays: number[], fromDate = todayISO()) {
@@ -111,6 +113,7 @@ function chartTheme(mode: 'light' | 'dark') {
 
 const tabs = [
   { id: 'stats', icon: BarChart3 },
+  { id: 'quickbook', icon: CalendarPlus },
   { id: 'staff', icon: Users },
   { id: 'services', icon: Sparkles },
   { id: 'categories', icon: FolderTree },
@@ -446,6 +449,7 @@ export function AdminPage() {
 
   const labels: Record<TabId, string> = {
     stats: t.admin.stats,
+    quickbook: t.admin.quickBook,
     staff: t.admin.staff,
     services: t.admin.services,
     categories: t.admin.categories,
@@ -1116,6 +1120,15 @@ export function AdminPage() {
 
         {!loading && !error && (
           <AnimatePanel tab={tab}>
+            {tab === 'quickbook' && (
+              <section className="portal__panel glass-strong">
+                <AdminQuickBook
+                  masters={masters}
+                  services={services}
+                  onCreated={() => load({ silent: true })}
+                />
+              </section>
+            )}
             {tab === 'stats' && stats && (
               <div className="admin__stats">
                 <div className="admin__report glass-strong">

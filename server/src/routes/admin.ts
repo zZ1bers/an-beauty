@@ -594,11 +594,13 @@ export async function adminRoutes(app: FastifyInstance) {
         firstName: z.string().min(1),
         lastName: z.string().min(1),
         phone: z.string().optional(),
+        email: z.string().email().optional(),
         notes: z.string().max(1000).optional(),
       })
       .safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: 'Invalid body' })
 
+    const guestEmail = body.data.email?.trim() || null
     const startsAt = new Date(body.data.startsAt)
     let service
     let endsAt: Date
@@ -630,6 +632,12 @@ export async function adminRoutes(app: FastifyInstance) {
     })
     if (!master) return reply.status(404).send({ error: 'Master not found' })
 
+    // No DB column for guestEmail — keep optional email in notes for staff visibility
+    const noteParts = [
+      guestEmail ? `Email: ${guestEmail}` : null,
+      body.data.notes?.trim() || null,
+    ].filter(Boolean)
+
     const booking = await prisma.booking.create({
       data: {
         clientId: null,
@@ -639,7 +647,7 @@ export async function adminRoutes(app: FastifyInstance) {
         endsAt,
         status: BookingStatus.CONFIRMED,
         priceSnapshot: priced.price,
-        notes: body.data.notes?.trim() || null,
+        notes: noteParts.length ? noteParts.join('\n') : null,
         guestFirstName: body.data.firstName.trim(),
         guestLastName: body.data.lastName.trim(),
         guestPhone: body.data.phone?.trim() || null,
@@ -655,7 +663,7 @@ export async function adminRoutes(app: FastifyInstance) {
       bookingId: booking.id,
       locale: (master.user.locale ?? 'de') as BookingLocale,
       clientUserId: null,
-      clientEmail: null,
+      clientEmail: guestEmail,
       clientPhone: body.data.phone?.trim() || null,
       clientFirstName: body.data.firstName.trim(),
       clientLastName: body.data.lastName.trim(),
@@ -681,7 +689,7 @@ export async function adminRoutes(app: FastifyInstance) {
       price: Number(booking.priceSnapshot),
       client: `${booking.guestFirstName} ${booking.guestLastName}`,
       clientId: null,
-      clientEmail: null,
+      clientEmail: guestEmail,
       clientPhone: booking.guestPhone,
       isGuest: true,
       guestPhone: booking.guestPhone,

@@ -118,8 +118,11 @@ export function StaffPage() {
       setError('')
     }
     try {
-      const from = startOfMonth(calendarMonth)
-      const to = addDays(addMonths(calendarMonth, 1), 7)
+      const monthFrom = startOfMonth(calendarMonth)
+      const monthTo = addDays(addMonths(calendarMonth, 1), 7)
+      // Always include the selected day so offs show when date ≠ calendar month
+      const from = date < monthFrom ? date : monthFrom
+      const to = date > monthTo ? addDays(date, 1) : monthTo
       const [b, l, s, catalogRows, me] = await Promise.all([
         api<MasterBooking[]>(`/master/bookings?date=${date}`),
         api<{ load: number }>(`/master/load?date=${date}`),
@@ -183,6 +186,15 @@ export function StaffPage() {
     })
   }, [schedule, date])
 
+  /** Full-day blocks are stored as half-open [dayStart, nextDayStart). */
+  const coversFullDay = (startsAt: string | Date, endsAt: string | Date, day: string) => {
+    const s = new Date(startsAt)
+    const e = new Date(endsAt)
+    const start = dayStart(day)
+    const next = dayStart(addDays(day, 1))
+    return s <= start && e >= next
+  }
+
   const slotStates = useMemo(() => {
     const map = new Map<
       string,
@@ -190,13 +202,7 @@ export function StaffPage() {
     >()
 
     const offs = schedule?.timeOffs ?? []
-    const dayOff = offs.find((o) => {
-      const s = new Date(o.startsAt)
-      const e = new Date(o.endsAt)
-      const ds = dayStart(date)
-      const de = dayEnd(date)
-      return s <= ds && e >= de
-    })
+    const dayOff = offs.find((o) => coversFullDay(o.startsAt, o.endsAt, date))
 
     for (const time of daySlotTimes) {
       const slotStart = localDateTime(date, time)
@@ -230,11 +236,7 @@ export function StaffPage() {
 
   const fullDayOff = useMemo(() => {
     const offs = schedule?.timeOffs ?? []
-    return offs.find((o) => {
-      const s = new Date(o.startsAt)
-      const e = new Date(o.endsAt)
-      return s <= dayStart(date) && e >= dayEnd(date)
-    })
+    return offs.find((o) => coversFullDay(o.startsAt, o.endsAt, date))
   }, [schedule, date])
 
   const calendarCells = useMemo(() => monthGrid(calendarMonth), [calendarMonth])
@@ -243,10 +245,8 @@ export function StaffPage() {
     const map = new Map<string, string>()
     const days = calendarCells.filter(Boolean).map((c) => c!.date)
     for (const o of schedule?.timeOffs ?? []) {
-      const s = new Date(o.startsAt)
-      const e = new Date(o.endsAt)
       for (const day of days) {
-        if (s <= dayStart(day) && e >= dayEnd(day)) {
+        if (coversFullDay(o.startsAt, o.endsAt, day)) {
           map.set(day, o.id)
         }
       }
@@ -511,7 +511,16 @@ export function StaffPage() {
         {!loading && view === 'day' && (
           <>
             <div className="admin__filters">
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => {
+                  const d = e.target.value
+                  setDate(d)
+                  // Keep schedule fetch window aligned with the selected day
+                  setCalendarMonth(startOfMonth(d))
+                }}
+              />
               <span style={{ alignSelf: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                 {formatDayLabel(date, locale)} · {hoursLabel}
               </span>
