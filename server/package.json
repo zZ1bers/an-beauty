@@ -14,6 +14,7 @@
     "db:ensure-admin": "tsx scripts/ensure-admin.ts",
     "db:seed-catalog": "tsx scripts/seed-catalog.ts",
     "db:update-hours": "tsx scripts/update-working-hours.ts",
+    "db:close-from-october": "tsx scripts/close-from-october.ts",
     "db:studio": "prisma studio",
     "db:push": "prisma db push"
   },
