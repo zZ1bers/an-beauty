@@ -199,7 +199,7 @@ export async function masterRoutes(app: FastifyInstance) {
         ? salonDateTime(q.data.to.slice(0, 10), '23:59')
         : new Date(from.getTime() + 62 * 24 * 60 * 60 * 1000)
 
-    const [workingHours, timeOffs] = await Promise.all([
+    const [workingHours, timeOffs, opens] = await Promise.all([
       prisma.workingHours.findMany({ where: { masterId }, orderBy: { dayOfWeek: 'asc' } }),
       prisma.timeOff.findMany({
         where: {
@@ -209,8 +209,16 @@ export async function masterRoutes(app: FastifyInstance) {
         },
         orderBy: { startsAt: 'asc' },
       }),
+      prisma.masterOpen.findMany({
+        where: {
+          masterId,
+          startsAt: { lte: to },
+          endsAt: { gte: from },
+        },
+        orderBy: { startsAt: 'asc' },
+      }),
     ])
-    return { workingHours, timeOffs }
+    return { workingHours, timeOffs, opens }
   })
 
   app.put('/master/schedule', masterOnly, async (request, reply) => {
@@ -325,6 +333,58 @@ export async function masterRoutes(app: FastifyInstance) {
     const row = await prisma.timeOff.findFirst({ where: { id, masterId } })
     if (!row) return reply.status(404).send({ error: 'Not found' })
     await prisma.timeOff.delete({ where: { id } })
+    return { ok: true }
+  })
+
+  /** Explicit open window (required from DEFAULT_CLOSED_FROM for client bookings). */
+  app.post('/master/open', masterOnly, async (request, reply) => {
+    const masterId = await getMasterProfileId(request.user.id)
+    if (!masterId) return reply.status(404).send({ error: 'Master profile not found' })
+
+    const body = z
+      .object({
+        startsAt: z.string(),
+        endsAt: z.string(),
+        reason: z.string().optional(),
+      })
+      .safeParse(request.body)
+    if (!body.success) return reply.status(400).send({ error: 'Invalid body' })
+
+    const startsAt = new Date(body.data.startsAt)
+    const endsAt = new Date(body.data.endsAt)
+    if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime()) || endsAt <= startsAt) {
+      return reply.status(400).send({ error: 'Invalid time range' })
+    }
+
+    const existing = await prisma.masterOpen.findFirst({
+      where: {
+        masterId,
+        startsAt: { lte: startsAt },
+        endsAt: { gte: endsAt },
+      },
+    })
+    if (existing) {
+      return reply.status(200).send(existing)
+    }
+
+    const row = await prisma.masterOpen.create({
+      data: {
+        masterId,
+        startsAt,
+        endsAt,
+        reason: body.data.reason,
+      },
+    })
+    return reply.status(201).send(row)
+  })
+
+  app.post('/master/open/:id/remove', masterOnly, async (request, reply) => {
+    const masterId = await getMasterProfileId(request.user.id)
+    if (!masterId) return reply.status(404).send({ error: 'Master profile not found' })
+    const { id } = request.params as { id: string }
+    const row = await prisma.masterOpen.findFirst({ where: { id, masterId } })
+    if (!row) return reply.status(404).send({ error: 'Not found' })
+    await prisma.masterOpen.delete({ where: { id } })
     return { ok: true }
   })
 

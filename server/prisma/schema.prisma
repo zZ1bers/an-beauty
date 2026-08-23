@@ -94,6 +94,8 @@ model MasterProfile {
   bookings     Booking[]
   workingHours WorkingHours[]
   timeOffs     TimeOff[]
+  /// Explicit open windows (used from DEFAULT_CLOSED_FROM — time closed until opened)
+  opens        MasterOpen[]
   clientNotes  ClientNote[]
 }
 
@@ -194,6 +196,19 @@ model WorkingHours {
 }
 
 model TimeOff {
+  id       String   @id @default(cuid())
+  masterId String
+  startsAt DateTime
+  endsAt   DateTime
+  reason   String?
+
+  master MasterProfile @relation(fields: [masterId], references: [id], onDelete: Cascade)
+
+  @@index([masterId, startsAt])
+}
+
+/// Master explicitly opened window (required for bookings from DEFAULT_CLOSED_FROM).
+model MasterOpen {
   id       String   @id @default(cuid())
   masterId String
   startsAt DateTime

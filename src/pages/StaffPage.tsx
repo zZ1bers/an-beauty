@@ -7,6 +7,7 @@ import { useAuth } from '../auth/AuthContext'
 import { api, ApiError } from '../lib/api'
 import { ConfirmDialog } from '../components/ui/Modal'
 import { useToast } from '../components/ui/Toast'
+import { isDefaultClosedDate } from '../lib/availabilityPolicy'
 import {
   addDays,
   addMonths,
@@ -36,10 +37,12 @@ type MasterBooking = {
 }
 
 type TimeOff = { id: string; startsAt: string; endsAt: string; reason: string | null }
+type MasterOpen = { id: string; startsAt: string; endsAt: string; reason: string | null }
 
 type Schedule = {
   workingHours: { id?: string; dayOfWeek: number; startTime: string; endTime: string }[]
   timeOffs: TimeOff[]
+  opens?: MasterOpen[]
 }
 
 type CatalogService = {
@@ -77,6 +80,10 @@ function toMin(hhmm: string) {
 
 async function removeTimeOff(id: string) {
   await api(`/master/time-off/${id}/remove`, { method: 'POST', body: JSON.stringify({}) })
+}
+
+async function removeOpen(id: string) {
+  await api(`/master/open/${id}/remove`, { method: 'POST', body: JSON.stringify({}) })
 }
 
 export function StaffPage() {
@@ -195,14 +202,22 @@ export function StaffPage() {
     return s <= start && e >= next
   }
 
+  const opensList = useMemo(() => schedule?.opens ?? [], [schedule])
+  const defaultClosedMode = isDefaultClosedDate(date)
+
   const slotStates = useMemo(() => {
     const map = new Map<
       string,
-      { kind: 'open' | 'busy' | 'blocked' | 'dayoff'; timeOffId?: string }
+      {
+        kind: 'open' | 'busy' | 'blocked' | 'dayoff'
+        timeOffId?: string
+        openId?: string
+      }
     >()
 
     const offs = schedule?.timeOffs ?? []
     const dayOff = offs.find((o) => coversFullDay(o.startsAt, o.endsAt, date))
+    const fullOpen = opensList.find((o) => coversFullDay(o.startsAt, o.endsAt, date))
 
     for (const time of daySlotTimes) {
       const slotStart = localDateTime(date, time)
@@ -214,6 +229,28 @@ export function StaffPage() {
       })
       if (booking) {
         map.set(time, { kind: 'busy' })
+        continue
+      }
+
+      if (defaultClosedMode) {
+        // Closed by default until master opens
+        const open =
+          fullOpen ||
+          opensList.find((o) => {
+            const s = new Date(o.startsAt)
+            const e = new Date(o.endsAt)
+            return s <= slotStart && e >= slotEnd
+          })
+        const block = offs.find((o) =>
+          overlaps(slotStart, slotEnd, new Date(o.startsAt), new Date(o.endsAt)),
+        )
+        if (open && !block) {
+          map.set(time, { kind: 'open', openId: open.id })
+        } else if (fullOpen && block) {
+          map.set(time, { kind: 'blocked', timeOffId: block.id })
+        } else {
+          map.set(time, { kind: 'blocked' }) // closed — click to open
+        }
         continue
       }
 
@@ -232,12 +269,16 @@ export function StaffPage() {
       }
     }
     return map
-  }, [bookings, schedule, date, daySlotTimes])
+  }, [bookings, schedule, date, daySlotTimes, opensList, defaultClosedMode])
 
   const fullDayOff = useMemo(() => {
+    if (defaultClosedMode) {
+      // In open-by-master mode: "closed" = no full-day open
+      return !opensList.some((o) => coversFullDay(o.startsAt, o.endsAt, date))
+    }
     const offs = schedule?.timeOffs ?? []
     return offs.find((o) => coversFullDay(o.startsAt, o.endsAt, date))
-  }, [schedule, date])
+  }, [schedule, date, opensList, defaultClosedMode])
 
   const calendarCells = useMemo(() => monthGrid(calendarMonth), [calendarMonth])
 
@@ -253,6 +294,23 @@ export function StaffPage() {
     }
     return map
   }, [schedule, calendarCells])
+
+  const dayOpenIds = useMemo(() => {
+    const map = new Map<string, string>()
+    const days = calendarCells.filter(Boolean).map((c) => c!.date)
+    for (const o of opensList) {
+      for (const day of days) {
+        if (coversFullDay(o.startsAt, o.endsAt, day)) {
+          map.set(day, o.id)
+        }
+      }
+    }
+    return map
+  }, [opensList, calendarCells])
+
+  const selectedDayOpenId = useMemo(() => {
+    return opensList.find((o) => coversFullDay(o.startsAt, o.endsAt, date))?.id
+  }, [opensList, date])
 
   const todayBookings = bookings
     .filter((b) => b.status === 'confirmed' || b.status === 'pending')
@@ -343,7 +401,30 @@ export function StaffPage() {
     if (!state || state.kind === 'busy' || busyAction) return
     setBusyAction(true)
     try {
-      if (state.kind === 'blocked' || state.kind === 'dayoff') {
+      if (defaultClosedMode) {
+        if (state.kind === 'open') {
+          if (selectedDayOpenId && state.openId === selectedDayOpenId) {
+            toast.push(t.staff.fullDayOpenHint, 'err')
+            return
+          }
+          if (state.openId) {
+            await removeOpen(state.openId)
+            toast.push(t.staff.closeSlots)
+          }
+        } else {
+          const startsAt = localDateTime(date, time)
+          const endsAt = new Date(startsAt.getTime() + SLOT_MIN * 60_000)
+          await api('/master/open', {
+            method: 'POST',
+            body: JSON.stringify({
+              startsAt: startsAt.toISOString(),
+              endsAt: endsAt.toISOString(),
+              reason: 'Opened slot',
+            }),
+          })
+          toast.push(t.staff.unblock)
+        }
+      } else if (state.kind === 'blocked' || state.kind === 'dayoff') {
         if (state.kind === 'dayoff') {
           toast.push(t.staff.fullDayOff, 'err')
           return
@@ -377,29 +458,55 @@ export function StaffPage() {
     if (busyAction) return
     setBusyAction(true)
     try {
-      const existingId = dayOffIds.get(day)
-      if (existingId) {
-        await removeTimeOff(existingId)
-        toast.push(t.staff.workingDay)
-      } else {
-        // Remove smaller slot blocks inside the day first
-        const offs = (schedule?.timeOffs ?? []).filter((o) =>
-          overlaps(dayStart(day), dayEnd(day), new Date(o.startsAt), new Date(o.endsAt)),
-        )
-        for (const o of offs) {
-          await removeTimeOff(o.id)
+      if (isDefaultClosedDate(day)) {
+        const existingOpenId = day === date ? selectedDayOpenId : dayOpenIds.get(day)
+        if (existingOpenId) {
+          await removeOpen(existingOpenId)
+          toast.push(t.staff.fullDayOff)
+        } else {
+          // Drop smaller opens inside the day first
+          const partials = opensList.filter((o) =>
+            overlaps(dayStart(day), dayEnd(day), new Date(o.startsAt), new Date(o.endsAt)),
+          )
+          for (const o of partials) {
+            await removeOpen(o.id)
+          }
+          const start = dayStart(day)
+          const end = new Date(dayStart(addDays(day, 1)).getTime())
+          await api('/master/open', {
+            method: 'POST',
+            body: JSON.stringify({
+              startsAt: start.toISOString(),
+              endsAt: end.toISOString(),
+              reason: 'Opened day',
+            }),
+          })
+          toast.push(t.staff.workingDay)
         }
-        const start = dayStart(day)
-        const end = new Date(dayStart(addDays(day, 1)).getTime())
-        await api('/master/time-off', {
-          method: 'POST',
-          body: JSON.stringify({
-            startsAt: start.toISOString(),
-            endsAt: end.toISOString(),
-            reason: 'Day off',
-          }),
-        })
-        toast.push(t.staff.fullDayOff)
+      } else {
+        const existingId = dayOffIds.get(day)
+        if (existingId) {
+          await removeTimeOff(existingId)
+          toast.push(t.staff.workingDay)
+        } else {
+          const offs = (schedule?.timeOffs ?? []).filter((o) =>
+            overlaps(dayStart(day), dayEnd(day), new Date(o.startsAt), new Date(o.endsAt)),
+          )
+          for (const o of offs) {
+            await removeTimeOff(o.id)
+          }
+          const start = dayStart(day)
+          const end = new Date(dayStart(addDays(day, 1)).getTime())
+          await api('/master/time-off', {
+            method: 'POST',
+            body: JSON.stringify({
+              startsAt: start.toISOString(),
+              endsAt: end.toISOString(),
+              reason: 'Day off',
+            }),
+          })
+          toast.push(t.staff.fullDayOff)
+        }
       }
       await loadData({ silent: true })
     } catch (e) {
@@ -529,15 +636,21 @@ export function StaffPage() {
                 disabled={busyAction}
                 onClick={() => void toggleFullDay(date)}
               >
-                {fullDayOff ? t.staff.fullDayOff : t.staff.clickToClose}
+                {defaultClosedMode
+                  ? fullDayOff
+                    ? t.staff.clickToOpen
+                    : t.staff.clickToClose
+                  : fullDayOff
+                    ? t.staff.fullDayOff
+                    : t.staff.clickToClose}
               </button>
             </div>
 
             <p className="portal__hint" style={{ marginBottom: '1rem' }}>
-              {t.staff.slotHint}
+              {defaultClosedMode ? t.staff.slotHintClosedByDefault : t.staff.slotHint}
             </p>
 
-            {!isWorkingDay && !fullDayOff && (
+            {!isWorkingDay && !(defaultClosedMode ? false : fullDayOff) && (
               <p className="portal__error" style={{ marginBottom: '1rem' }}>
                 {t.staff.dayOff} — {locale === 'ru' ? 'в недельном графике этот день выключен' : 'dieser Wochentag ist im Plan aus'}
               </p>
@@ -912,7 +1025,9 @@ export function StaffPage() {
                     return <div key={`empty-${i}`} className="staff-month__day is-empty" />
                   }
                   const { date: day } = cell
-                  const off = dayOffIds.has(day)
+                  const off = isDefaultClosedDate(day)
+                    ? !dayOpenIds.has(day)
+                    : dayOffIds.has(day)
                   const dow = salonDayOfWeek(day)
                   const inWeekPlan = hoursDraft.some((h) => h.dayOfWeek === dow && h.enabled)
                   const isToday = day === today

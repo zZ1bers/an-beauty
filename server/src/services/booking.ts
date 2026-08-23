@@ -1,5 +1,6 @@
 import { BookingStatus } from '@prisma/client'
 import { prisma } from '../db.js'
+import { isDefaultClosedDate, DEFAULT_CLOSED_FROM } from '../lib/availabilityPolicy.js'
 import {
   addCalendarDays,
   salonDateStr,
@@ -37,6 +38,14 @@ export function normalizeHm(raw: string) {
   return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
 }
 
+function isFullyCoveredByOpen(
+  opens: { startsAt: Date; endsAt: Date }[],
+  slotStart: Date,
+  slotEnd: Date,
+) {
+  return opens.some((o) => o.startsAt <= slotStart && o.endsAt >= slotEnd)
+}
+
 export async function getAvailableSlots(masterId: string, dateStr: string, durationMin: number) {
   const dayOfWeek = salonDayOfWeek(dateStr)
 
@@ -47,8 +56,9 @@ export async function getAvailableSlots(masterId: string, dateStr: string, durat
 
   const { start: dayStart, end: dayEnd } = salonDayBounds(dateStr)
   const now = new Date()
+  const closedByDefault = isDefaultClosedDate(dateStr)
 
-  const [bookings, timeOffs] = await Promise.all([
+  const [bookings, timeOffs, opens] = await Promise.all([
     prisma.booking.findMany({
       where: {
         masterId,
@@ -64,7 +74,21 @@ export async function getAvailableSlots(masterId: string, dateStr: string, durat
         endsAt: { gt: dayStart },
       },
     }),
+    closedByDefault
+      ? prisma.masterOpen.findMany({
+          where: {
+            masterId,
+            startsAt: { lt: dayEnd },
+            endsAt: { gt: dayStart },
+          },
+        })
+      : Promise.resolve([] as { startsAt: Date; endsAt: Date }[]),
   ])
+
+  // From DEFAULT_CLOSED_FROM: no explicit open → whole day closed for clients
+  if (closedByDefault && opens.length === 0) {
+    return { slots: [] as string[], dayOff: true }
+  }
 
   // Master's own hours, clipped to salon open window 10:00–20:00
   const masterStart = toMinutes(normalizeHm(hours.startTime))
@@ -81,6 +105,8 @@ export async function getAvailableSlots(masterId: string, dateStr: string, durat
     const slotEnd = new Date(slotStart.getTime() + durationMin * 60_000)
     if (slotStart <= now) continue
 
+    if (closedByDefault && !isFullyCoveredByOpen(opens, slotStart, slotEnd)) continue
+
     const busy =
       bookings.some((b) => b.startsAt < slotEnd && b.endsAt > slotStart) ||
       timeOffs.some((o) => o.startsAt < slotEnd && o.endsAt > slotStart)
@@ -93,7 +119,7 @@ export async function getAvailableSlots(masterId: string, dateStr: string, durat
 
 /**
  * Which days in [from, to] have at least one free slot for this master/duration.
- * Loads bookings + time-offs once for the whole range.
+ * Loads bookings + time-offs (+ opens when needed) once for the whole range.
  */
 export async function getAvailabilityRange(
   masterId: string,
@@ -107,7 +133,8 @@ export async function getAvailabilityRange(
   const rangeStart = salonDateTime(fromStr, '00:00')
   const rangeEnd = salonDateTime(addCalendarDays(toStr, 1), '00:00')
 
-  const [bookings, timeOffs] = await Promise.all([
+  const needsOpens = toStr >= DEFAULT_CLOSED_FROM
+  const [bookings, timeOffs, opens] = await Promise.all([
     prisma.booking.findMany({
       where: {
         masterId,
@@ -123,6 +150,15 @@ export async function getAvailabilityRange(
         endsAt: { gt: rangeStart },
       },
     }),
+    needsOpens
+      ? prisma.masterOpen.findMany({
+          where: {
+            masterId,
+            startsAt: { lt: rangeEnd },
+            endsAt: { gt: rangeStart },
+          },
+        })
+      : Promise.resolve([] as { startsAt: Date; endsAt: Date }[]),
   ])
 
   const now = new Date()
@@ -131,6 +167,7 @@ export async function getAvailabilityRange(
   while (cur <= toStr) {
     const dow = salonDayOfWeek(cur)
     const hours = hoursByDow.get(dow)
+    const closedByDefault = isDefaultClosedDate(cur)
     if (!hours) {
       unavailable.push(cur)
     } else {
@@ -145,6 +182,7 @@ export async function getAvailabilityRange(
           const slotStart = salonDateTime(cur, label)
           const slotEnd = new Date(slotStart.getTime() + durationMin * 60_000)
           if (slotStart <= now) continue
+          if (closedByDefault && !isFullyCoveredByOpen(opens, slotStart, slotEnd)) continue
           const busy =
             bookings.some((b) => b.startsAt < slotEnd && b.endsAt > slotStart) ||
             timeOffs.some((o) => o.startsAt < slotEnd && o.endsAt > slotStart)
@@ -247,6 +285,20 @@ export async function assertSlotFree(
   })
   if (blocked) {
     throw new Error('SLOT_BLOCKED')
+  }
+
+  // From Oct 2026: booking only on explicitly opened windows
+  if (isDefaultClosedDate(salonDateStr(startsAt))) {
+    const open = await prisma.masterOpen.findFirst({
+      where: {
+        masterId,
+        startsAt: { lte: startsAt },
+        endsAt: { gte: endsAt },
+      },
+    })
+    if (!open) {
+      throw new Error('SLOT_BLOCKED')
+    }
   }
 }
 
