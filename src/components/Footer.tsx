@@ -32,14 +32,14 @@ export function Footer() {
           AN<span>.</span>Beauty
         </Link>
         <div className="footer__links">
-          <a href="/#about" onClick={(e) => onHashNav(e, '/#about')}>
-            {t.nav.about}
+          <a href="/#masters" onClick={(e) => onHashNav(e, '/#masters')}>
+            {t.nav.masters}
           </a>
           <a href="/#services" onClick={(e) => onHashNav(e, '/#services')}>
             {t.nav.services}
           </a>
-          <a href="/#masters" onClick={(e) => onHashNav(e, '/#masters')}>
-            {t.nav.masters}
+          <a href="/#about" onClick={(e) => onHashNav(e, '/#about')}>
+            {t.nav.about}
           </a>
           <Link to="/booking">{t.nav.book}</Link>
         </div>

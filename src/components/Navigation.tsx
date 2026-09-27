@@ -39,9 +39,9 @@ export function Navigation() {
   const clientName = isClient && user ? user.firstName : null
 
   const links = [
-    { to: '/#about', label: t.nav.about },
-    { to: '/#services', label: t.nav.services },
     { to: '/#masters', label: t.nav.masters },
+    { to: '/#services', label: t.nav.services },
+    { to: '/#about', label: t.nav.about },
     { to: '/booking', label: t.nav.book },
   ]
 

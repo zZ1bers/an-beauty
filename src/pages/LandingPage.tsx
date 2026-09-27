@@ -13,10 +13,10 @@ export function LandingPage() {
     <main className="page-enter page-shell">
       <div className="page-shell__main page-shell__main--top">
         <Hero />
+        <MastersStrip />
+        <ServicesShowcase />
         <AboutSalon />
         <VisitRitual />
-        <ServicesShowcase />
-        <MastersStrip />
         <StudioSpace />
         <GuestVoices />
         <Atmosphere />
