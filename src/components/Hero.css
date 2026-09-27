@@ -25,7 +25,7 @@
 			transparent 40%,
 			var(--scrim-mid) 100%
 		),
-		url('https://images.unsplash.com/photo-1560066984-138dadb4c035?w=2000&q=85')
+		url('/hero-reception.png')
 			center / cover no-repeat;
 	animation: heroKen 28s ease-in-out infinite alternate;
 }
@@ -318,7 +318,7 @@
 				rgba(26, 21, 18, 0.22) 40%,
 				rgba(26, 21, 18, 0.6) 100%
 			),
-			url('https://images.unsplash.com/photo-1560066984-138dadb4c035?w=2000&q=85')
+			url('/hero-reception.png')
 				center / cover no-repeat;
 	}
 
