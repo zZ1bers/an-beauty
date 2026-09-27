@@ -404,28 +404,12 @@ export function StaffPage() {
     setBusyAction(true)
     try {
       if (defaultClosedMode) {
-        if (state.kind === 'open') {
-          if (selectedDayOpenId && state.openId === selectedDayOpenId) {
-            toast.push(t.staff.fullDayOpenHint, 'err')
-            return
-          }
-          if (state.openId) {
-            await removeOpen(state.openId)
-            toast.push(t.staff.closeSlots)
-          }
-        } else {
-          const startsAt = localDateTime(date, time)
-          const endsAt = new Date(startsAt.getTime() + SLOT_MIN * 60_000)
-          await api('/master/open', {
-            method: 'POST',
-            body: JSON.stringify({
-              startsAt: startsAt.toISOString(),
-              endsAt: endsAt.toISOString(),
-              reason: 'Opened slot',
-            }),
-          })
-          toast.push(t.staff.unblock)
-        }
+        const wantOpen = state.kind !== 'open'
+        await api('/master/slot', {
+          method: 'POST',
+          body: JSON.stringify({ date, time, open: wantOpen }),
+        })
+        toast.push(wantOpen ? t.staff.unblock : t.staff.closeSlots)
       } else if (state.kind === 'blocked' || state.kind === 'dayoff') {
         if (state.kind === 'dayoff') {
           toast.push(t.staff.fullDayOff, 'err')

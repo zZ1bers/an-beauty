@@ -5,7 +5,7 @@ import { prisma } from '../db.js'
 import { requireRole } from '../plugins/auth.js'
 import { getMasterLoad } from '../services/booking.js'
 import { redactContactText } from '../lib/redactContact.js'
-import { salonDateTime, salonDayBounds } from '../lib/salonTime.js'
+import { addCalendarDays, salonDateTime, salonDayBounds, salonDayOfWeek } from '../lib/salonTime.js'
 
 async function getMasterProfileId(userId: string) {
   const m = await prisma.masterProfile.findUnique({ where: { userId } })
@@ -334,6 +334,108 @@ export async function masterRoutes(app: FastifyInstance) {
     const row = await prisma.timeOff.findFirst({ where: { id, masterId } })
     if (!row) return reply.status(404).send({ error: 'Not found' })
     await prisma.timeOff.delete({ where: { id } })
+    return { ok: true }
+  })
+
+  /** Open or close a single 30-minute slot from Oct 2026 onward, without opening the whole day. */
+  app.post('/master/slot', masterOnly, async (request, reply) => {
+    const masterId = await getMasterProfileId(request.user.id)
+    if (!masterId) return reply.status(404).send({ error: 'Master profile not found' })
+
+    const body = z
+      .object({
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        time: z.string().regex(/^\d{2}:\d{2}$/),
+        open: z.boolean(),
+      })
+      .safeParse(request.body)
+    if (!body.success) return reply.status(400).send({ error: 'Invalid body' })
+
+    const { date, time, open } = body.data
+    const dayOfWeek = salonDayOfWeek(date)
+    const hours = await prisma.workingHours.findUnique({
+      where: { masterId_dayOfWeek: { masterId, dayOfWeek } },
+    })
+    if (!hours) return reply.status(409).send({ error: 'DAY_OFF' })
+
+    const toMin = (hhmm: string) => {
+      const [h = '0', m = '0'] = hhmm.split(':')
+      return (Number(h) || 0) * 60 + (Number(m) || 0)
+    }
+    const fromMin = (total: number) =>
+      `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+
+    const workStart = Math.max(10 * 60, toMin(hours.startTime))
+    const workEnd = Math.min(20 * 60, toMin(hours.endTime))
+    const grid: string[] = []
+    for (let t = workStart; t + 30 <= workEnd; t += 30) grid.push(fromMin(t))
+    if (!grid.includes(time)) return reply.status(400).send({ error: 'OUTSIDE_HOURS' })
+
+    const dayStart = salonDateTime(date, '00:00')
+    const dayEnd = salonDateTime(addCalendarDays(date, 1), '00:00')
+    const slotStart = salonDateTime(date, time)
+    const slotEnd = new Date(slotStart.getTime() + 30 * 60_000)
+
+    await prisma.$transaction(async (tx) => {
+      const opens = await tx.masterOpen.findMany({
+        where: { masterId, startsAt: { lt: dayEnd }, endsAt: { gt: dayStart } },
+      })
+      const covered = new Set<string>()
+      for (const label of grid) {
+        const start = salonDateTime(date, label)
+        const end = new Date(start.getTime() + 30 * 60_000)
+        if (opens.some((o) => o.startsAt <= start && o.endsAt >= end)) covered.add(label)
+      }
+      if (open) covered.add(time)
+      else covered.delete(time)
+
+      if (open) {
+        const offs = await tx.timeOff.findMany({
+          where: { masterId, startsAt: { lt: slotEnd }, endsAt: { gt: slotStart } },
+        })
+        for (const off of offs) {
+          await tx.timeOff.delete({ where: { id: off.id } })
+          if (off.startsAt < slotStart) {
+            await tx.timeOff.create({
+              data: {
+                masterId,
+                startsAt: off.startsAt,
+                endsAt: slotStart,
+                reason: off.reason,
+              },
+            })
+          }
+          if (off.endsAt > slotEnd) {
+            await tx.timeOff.create({
+              data: {
+                masterId,
+                startsAt: slotEnd,
+                endsAt: off.endsAt,
+                reason: off.reason,
+              },
+            })
+          }
+        }
+      }
+
+      if (opens.length) {
+        await tx.masterOpen.deleteMany({ where: { id: { in: opens.map((o) => o.id) } } })
+      }
+      if (covered.size) {
+        await tx.masterOpen.createMany({
+          data: [...covered].map((label) => {
+            const start = salonDateTime(date, label)
+            return {
+              masterId,
+              startsAt: start,
+              endsAt: new Date(start.getTime() + 30 * 60_000),
+              reason: 'Opened slot',
+            }
+          }),
+        })
+      }
+    })
+
     return { ok: true }
   })
 

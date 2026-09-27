@@ -264,9 +264,8 @@ export const translations = {
       monthHint: 'Нажмите день, чтобы закрыть или открыть весь день',
       slotHint: 'Нажмите слот: закрыть / открыть. Серый — занят клиентом',
       slotHintClosedByDefault:
-        'С октября время закрыто по умолчанию. Откройте день или отдельные слоты — тогда клиенты смогут записаться.',
+        'С октября время закрыто, пока вы его не откроете. Нажмите отдельный слот, чтобы открыть или закрыть только это время.',
       fullDayOff: 'Весь день выходной',
-      fullDayOpenHint: 'Сначала закройте весь день кнопкой выше, затем открывайте отдельные слоты',
       workingDay: 'Рабочий день',
       clickToOpen: 'Нажмите, чтобы открыть',
       clickToClose: 'Нажмите, чтобы закрыть',
@@ -668,9 +667,8 @@ export const translations = {
       monthHint: 'Tag tippen, um den ganzen Tag zu sperren/öffnen',
       slotHint: 'Slot tippen: sperren / öffnen. Grau = gebucht',
       slotHintClosedByDefault:
-        'Ab Oktober ist die Zeit standardmäßig geschlossen. Öffnen Sie den Tag oder einzelne Slots — dann können Kunden buchen.',
+        'Ab Oktober ist die Zeit geschlossen, bis Sie sie öffnen. Tippen Sie einen Slot, um nur diese Zeit zu öffnen oder zu schließen.',
       fullDayOff: 'Ganzer Tag frei',
-      fullDayOpenHint: 'Schließen Sie zuerst den ganzen Tag über den Button oben, dann einzelne Slots öffnen',
       workingDay: 'Arbeitstag',
       clickToOpen: 'Tippen zum Öffnen',
       clickToClose: 'Tippen zum Sperren',

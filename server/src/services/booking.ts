@@ -38,12 +38,26 @@ export function normalizeHm(raw: string) {
   return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
 }
 
-function isFullyCoveredByOpen(
+/** True when open windows together cover [start, end], even as separate slots. */
+export function rangeCoveredByOpens(
   opens: { startsAt: Date; endsAt: Date }[],
-  slotStart: Date,
-  slotEnd: Date,
+  start: Date,
+  end: Date,
 ) {
-  return opens.some((o) => o.startsAt <= slotStart && o.endsAt >= slotEnd)
+  const from = start.getTime()
+  const to = end.getTime()
+  if (to <= from) return true
+  const pieces = opens
+    .map((o) => ({ s: o.startsAt.getTime(), e: o.endsAt.getTime() }))
+    .filter((o) => o.e > from && o.s < to)
+    .sort((a, b) => a.s - b.s)
+  let cursor = from
+  for (const piece of pieces) {
+    if (piece.s > cursor) return false
+    if (piece.e > cursor) cursor = piece.e
+    if (cursor >= to) return true
+  }
+  return cursor >= to
 }
 
 export async function getAvailableSlots(masterId: string, dateStr: string, durationMin: number) {
@@ -105,7 +119,7 @@ export async function getAvailableSlots(masterId: string, dateStr: string, durat
     const slotEnd = new Date(slotStart.getTime() + durationMin * 60_000)
     if (slotStart <= now) continue
 
-    if (closedByDefault && !isFullyCoveredByOpen(opens, slotStart, slotEnd)) continue
+    if (closedByDefault && !rangeCoveredByOpens(opens, slotStart, slotEnd)) continue
 
     const busy =
       bookings.some((b) => b.startsAt < slotEnd && b.endsAt > slotStart) ||
@@ -182,7 +196,7 @@ export async function getAvailabilityRange(
           const slotStart = salonDateTime(cur, label)
           const slotEnd = new Date(slotStart.getTime() + durationMin * 60_000)
           if (slotStart <= now) continue
-          if (closedByDefault && !isFullyCoveredByOpen(opens, slotStart, slotEnd)) continue
+          if (closedByDefault && !rangeCoveredByOpens(opens, slotStart, slotEnd)) continue
           const busy =
             bookings.some((b) => b.startsAt < slotEnd && b.endsAt > slotStart) ||
             timeOffs.some((o) => o.startsAt < slotEnd && o.endsAt > slotStart)
@@ -287,16 +301,16 @@ export async function assertSlotFree(
     throw new Error('SLOT_BLOCKED')
   }
 
-  // From Oct 2026: booking only on explicitly opened windows
+  // From Oct 2026: booking only on explicitly opened windows (several slots may add up)
   if (isDefaultClosedDate(salonDateStr(startsAt))) {
-    const open = await prisma.masterOpen.findFirst({
+    const opens = await prisma.masterOpen.findMany({
       where: {
         masterId,
-        startsAt: { lte: startsAt },
-        endsAt: { gte: endsAt },
+        startsAt: { lt: endsAt },
+        endsAt: { gt: startsAt },
       },
     })
-    if (!open) {
+    if (!rangeCoveredByOpens(opens, startsAt, endsAt)) {
       throw new Error('SLOT_BLOCKED')
     }
   }
