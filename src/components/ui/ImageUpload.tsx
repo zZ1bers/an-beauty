@@ -81,7 +81,6 @@ export function ImageUpload({ value, onChange, label }: Props) {
             ref={inputRef}
             type="file"
             accept="image/*"
-            capture="environment"
             hidden
             onChange={(e) => {
               const file = e.target.files?.[0]

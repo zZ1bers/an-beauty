@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { prisma } from '../db.js'
 import { requireRole } from '../plugins/auth.js'
 import { getMasterLoad } from '../services/booking.js'
+import { redactContactText } from '../lib/redactContact.js'
 import { salonDateTime, salonDayBounds } from '../lib/salonTime.js'
 
 async function getMasterProfileId(userId: string) {
@@ -110,7 +111,7 @@ export async function masterRoutes(app: FastifyInstance) {
       startsAt: b.startsAt.toISOString(),
       endsAt: b.endsAt.toISOString(),
       status: b.status.toLowerCase(),
-      notes: b.notes,
+      notes: redactContactText(b.notes),
       price: Number(b.priceSnapshot),
       service: {
         id: b.service.id,

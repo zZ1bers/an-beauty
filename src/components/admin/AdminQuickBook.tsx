@@ -4,6 +4,7 @@ import { useLang } from '../../i18n/LanguageContext'
 import { api, ApiError } from '../../lib/api'
 import { addDays, localDateTime, salonDayOfWeek, todayISO } from '../../lib/datetime'
 import { DatePicker } from '../booking/DatePicker'
+import { formatPriceLabel } from '../../lib/priceLabel'
 import { useToast } from '../ui/Toast'
 
 type MasterRow = {
@@ -18,6 +19,7 @@ type ServiceRow = {
   id: string
   name: { ru: string; de: string }
   price: number
+  priceMax?: number | null
   duration: number
   isActive: boolean
   masterIds?: string[]
@@ -334,7 +336,7 @@ export function AdminQuickBook({ masters, services, onCreated }: Props) {
               <span>
                 <strong>{s.name[locale]}</strong>
                 <em>
-                  {s.duration} {locale === 'ru' ? 'мин' : 'Min'} · {s.price.toFixed(0)} €
+                  {s.duration} {locale === 'ru' ? 'мин' : 'Min'} · {formatPriceLabel(s.price, s.priceMax)}
                 </em>
               </span>
             </button>
@@ -438,7 +440,7 @@ export function AdminQuickBook({ masters, services, onCreated }: Props) {
                 <span>
                   <strong>{s.name[locale]}</strong>
                   <em>
-                    {s.duration} {locale === 'ru' ? 'мин' : 'Min'} · {s.price.toFixed(0)} €
+                    {s.duration} {locale === 'ru' ? 'мин' : 'Min'} · {formatPriceLabel(s.price, s.priceMax)}
                   </em>
                 </span>
               </button>

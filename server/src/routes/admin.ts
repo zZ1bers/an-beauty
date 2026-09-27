@@ -230,6 +230,7 @@ export async function adminRoutes(app: FastifyInstance) {
     return rows.map((s) => ({
       ...s,
       price: Number(s.price),
+      priceMax: s.priceMax != null ? Number(s.priceMax) : null,
       name: { ru: s.nameRu, de: s.nameDe },
       description: { ru: s.descriptionRu, de: s.descriptionDe },
       image: s.imageUrl,
@@ -248,6 +249,7 @@ export async function adminRoutes(app: FastifyInstance) {
         descriptionRu: z.string().optional().default(''),
         descriptionDe: z.string().optional().default(''),
         price: z.number(),
+        priceMax: z.number().nullable().optional(),
         durationMin: z.number().int().positive(),
         imageUrl: z.string().optional().default(''),
         featured: z.boolean().optional(),
@@ -272,6 +274,7 @@ export async function adminRoutes(app: FastifyInstance) {
       return reply.status(201).send({
         ...row,
         price: Number(row.price),
+        priceMax: row.priceMax != null ? Number(row.priceMax) : null,
         masterIds: row.masters.map((m) => m.masterId),
       })
     } catch (e: unknown) {
@@ -292,6 +295,7 @@ export async function adminRoutes(app: FastifyInstance) {
         descriptionRu: z.string().optional(),
         descriptionDe: z.string().optional(),
         price: z.number().optional(),
+        priceMax: z.number().nullable().optional(),
         durationMin: z.number().int().positive().optional(),
         imageUrl: z.string().optional(),
         featured: z.boolean().optional(),
@@ -322,6 +326,7 @@ export async function adminRoutes(app: FastifyInstance) {
       return {
         ...row,
         price: Number(row.price),
+        priceMax: row.priceMax != null ? Number(row.priceMax) : null,
         masterIds: row.masters.map((m) => m.masterId),
       }
     } catch {

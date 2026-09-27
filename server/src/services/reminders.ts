@@ -37,7 +37,7 @@ export async function sendDueBookingReminders() {
 
   for (const b of rows) {
     const phone = b.client?.user.phone || b.guestPhone
-    const email = b.client?.user.email || null
+    const email = b.client?.user.email || b.guestEmail || null
     const locale = (b.client?.user.locale ?? 'ru') as BookingLocale
     const ctx: BookingMessageContext = {
       locale,

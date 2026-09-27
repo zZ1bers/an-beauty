@@ -1,4 +1,4 @@
-import { useState, type FormEvent, useEffect } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useLang } from '../i18n/LanguageContext'
@@ -6,33 +6,24 @@ import { useAuth, homeForRole } from '../auth/AuthContext'
 import { api, ApiError } from '../lib/api'
 import './LoginPage.css'
 
-type Mode = 'login' | 'register' | 'forgot' | 'reset'
+type Mode = 'login' | 'forgot' | 'reset'
 
 export function LoginPage() {
   const { locale } = useLang()
-  const { login, register, user, loading } = useAuth()
+  const { login, user, loading } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const state = location.state as { from?: string; mode?: 'login' | 'register' } | null
+  const state = location.state as { from?: string } | null
   const from = state?.from
 
-  const [mode, setMode] = useState<Mode>(state?.mode === 'register' ? 'register' : 'login')
+  const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [code, setCode] = useState('')
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [phone, setPhone] = useState('')
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [busy, setBusy] = useState(false)
-
-  useEffect(() => {
-    if (state?.mode === 'register' || state?.mode === 'login') {
-      setMode(state.mode)
-    }
-  }, [state?.mode])
 
   if (!loading && user) {
     return <Navigate to={from || homeForRole(user.role)} replace />
@@ -44,17 +35,15 @@ export function LoginPage() {
           title:
             mode === 'login'
               ? 'Вход'
-              : mode === 'register'
-                ? 'Регистрация'
-                : mode === 'forgot'
-                  ? 'Забыли пароль'
-                  : 'Новый пароль',
+              : mode === 'forgot'
+                ? 'Забыли пароль'
+                : 'Новый пароль',
           sub:
             mode === 'forgot'
               ? 'Отправим 6-значный код на вашу почту'
               : mode === 'reset'
                 ? 'Введите код из письма и придумайте новый пароль'
-                : 'Кабинеты клиента, мастера и администратора',
+                : 'Вход для сотрудников салона',
           email: 'Email',
           password: 'Пароль',
           confirmPassword: 'Повторите пароль',
@@ -65,13 +54,9 @@ export function LoginPage() {
           submit:
             mode === 'login'
               ? 'Войти'
-              : mode === 'register'
-                ? 'Создать аккаунт'
-                : mode === 'forgot'
-                  ? 'Отправить код'
-                  : 'Сохранить пароль',
-          switchHint: mode === 'login' ? 'Нет аккаунта?' : 'Уже есть аккаунт?',
-          switchAction: mode === 'login' ? 'Регистрация' : 'Войти',
+              : mode === 'forgot'
+                ? 'Отправить код'
+                : 'Сохранить пароль',
           forgot: 'Забыли пароль?',
           backToLogin: 'Вернуться ко входу',
           codeSent: 'Если аккаунт существует, код отправлен на почту. Проверьте входящие и спам.',
@@ -89,17 +74,15 @@ export function LoginPage() {
           title:
             mode === 'login'
               ? 'Anmelden'
-              : mode === 'register'
-                ? 'Registrieren'
-                : mode === 'forgot'
-                  ? 'Passwort vergessen'
-                  : 'Neues Passwort',
+              : mode === 'forgot'
+                ? 'Passwort vergessen'
+                : 'Neues Passwort',
           sub:
             mode === 'forgot'
               ? 'Wir senden einen 6-stelligen Code an Ihre E-Mail'
               : mode === 'reset'
                 ? 'Code aus der E-Mail eingeben und neues Passwort setzen'
-                : 'Kunden-, Mitarbeiter- und Admin-Bereich',
+                : 'Anmeldung für das Salon-Team',
           email: 'Email',
           password: 'Passwort',
           confirmPassword: 'Passwort wiederholen',
@@ -110,13 +93,9 @@ export function LoginPage() {
           submit:
             mode === 'login'
               ? 'Einloggen'
-              : mode === 'register'
-                ? 'Konto erstellen'
-                : mode === 'forgot'
-                  ? 'Code senden'
-                  : 'Passwort speichern',
-          switchHint: mode === 'login' ? 'Kein Konto?' : 'Bereits Konto?',
-          switchAction: mode === 'login' ? 'Registrieren' : 'Anmelden',
+              : mode === 'forgot'
+                ? 'Code senden'
+                : 'Passwort speichern',
           forgot: 'Passwort vergessen?',
           backToLogin: 'Zurück zum Login',
           codeSent:
@@ -151,18 +130,6 @@ export function LoginPage() {
     try {
       if (mode === 'login') {
         const u = await login(email.trim(), password)
-        navigate(from || homeForRole(u.role), { replace: true })
-        return
-      }
-
-      if (mode === 'register') {
-        const u = await register({
-          email: email.trim(),
-          password,
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          phone: phone.trim() || undefined,
-        })
         navigate(from || homeForRole(u.role), { replace: true })
         return
       }
@@ -216,30 +183,6 @@ export function LoginPage() {
         <h1 className="login__title display">{copy.title}</h1>
         <p className="login__sub">{copy.sub}</p>
 
-        {mode === 'register' && (
-          <>
-            <div className="login__row">
-              <label>
-                {copy.firstName}
-                <input value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
-              </label>
-              <label>
-                {copy.lastName}
-                <input value={lastName} onChange={(e) => setLastName(e.target.value)} required />
-              </label>
-            </div>
-            <label>
-              {copy.phone}
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
-              />
-            </label>
-          </>
-        )}
-
         <label>
           {copy.email}
           <input
@@ -267,7 +210,7 @@ export function LoginPage() {
           </label>
         )}
 
-        {(mode === 'login' || mode === 'register' || mode === 'reset') && (
+        {(mode === 'login' || mode === 'reset') && (
           <label>
             {copy.password}
             <input
@@ -316,21 +259,6 @@ export function LoginPage() {
         <button className="btn btn-primary" type="submit" disabled={busy}>
           {copy.submit}
         </button>
-
-        {(mode === 'login' || mode === 'register') && (
-          <button
-            type="button"
-            className="login__switch"
-            onClick={() => {
-              setMode((m) => (m === 'login' ? 'register' : 'login'))
-              setError('')
-              setInfo('')
-            }}
-          >
-            <span className="login__switch-hint">{copy.switchHint}</span>
-            <span className="login__switch-action">{copy.switchAction}</span>
-          </button>
-        )}
 
         {(mode === 'forgot' || mode === 'reset') && (
           <button

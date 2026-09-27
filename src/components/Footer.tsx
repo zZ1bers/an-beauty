@@ -42,7 +42,6 @@ export function Footer() {
             {t.nav.masters}
           </a>
           <Link to="/booking">{t.nav.book}</Link>
-          <Link to="/cabinet">{t.nav.cabinet}</Link>
         </div>
         <div className="footer__lang">
           <span>{t.footer.lang}</span>

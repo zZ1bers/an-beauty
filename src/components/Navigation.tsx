@@ -43,7 +43,6 @@ export function Navigation() {
     { to: '/#services', label: t.nav.services },
     { to: '/#masters', label: t.nav.masters },
     { to: '/booking', label: t.nav.book },
-    { to: '/cabinet', label: t.nav.cabinet },
   ]
 
   const onHashNav = (e: MouseEvent<HTMLAnchorElement>, to: string) => {
@@ -210,11 +209,7 @@ export function Navigation() {
                 </button>
               )}
             </>
-          ) : (
-            <Link to="/login" className="btn btn-primary nav__cta">
-              {locale === 'ru' ? 'Войти' : 'Login'}
-            </Link>
-          )}
+          ) : null}
           <button
             type="button"
             className="nav__burger"
@@ -333,21 +328,7 @@ export function Navigation() {
                   {t.admin.logout}
                 </button>
               </>
-            ) : (
-              <>
-                <Link to="/login" className="btn btn-primary" onClick={() => setOpen(false)}>
-                  {locale === 'ru' ? 'Войти' : 'Login'}
-                </Link>
-                <Link
-                  to="/login"
-                  state={{ mode: 'register' }}
-                  className="btn btn-ghost"
-                  onClick={() => setOpen(false)}
-                >
-                  {locale === 'ru' ? 'Регистрация' : 'Registrieren'}
-                </Link>
-              </>
-            )}
+            ) : null}
           </div>
 
           <div className="nav__mobile-legal">

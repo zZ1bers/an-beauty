@@ -8,6 +8,7 @@ import { api, ApiError } from '../lib/api'
 import { ConfirmDialog } from '../components/ui/Modal'
 import { useToast } from '../components/ui/Toast'
 import { isDefaultClosedDate } from '../lib/availabilityPolicy'
+import { formatPriceLabel } from '../lib/priceLabel'
 import {
   addDays,
   addMonths,
@@ -49,6 +50,7 @@ type CatalogService = {
   id: string
   name: { ru: string; de: string }
   price: number
+  priceMax?: number | null
   duration: number
 }
 
@@ -1070,7 +1072,7 @@ export function StaffPage() {
                   <span>
                     {s.name[locale]}
                     <em style={{ display: 'block', opacity: 0.65, fontStyle: 'normal', fontSize: '0.8rem' }}>
-                      €{s.price} · {s.duration} min
+                      {formatPriceLabel(s.price, s.priceMax)} · {s.duration} min
                     </em>
                   </span>
                 </label>

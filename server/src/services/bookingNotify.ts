@@ -8,6 +8,7 @@ import {
   type BookingLocale,
   type BookingMessageContext,
 } from './bookingMessages.js'
+import { redactContactText } from '../lib/redactContact.js'
 import { sendBookingClientConfirmEmail, sendBookingMasterNotifyEmail } from './mail.js'
 import { sendSms } from './sms.js'
 
@@ -107,12 +108,10 @@ export async function notifyBookingCreated(opts: {
       masterLocale: opts.masterLocale,
       clientFirstName: opts.clientFirstName,
       clientLastName: opts.clientLastName,
-      clientPhone: opts.clientPhone,
-      clientEmail: opts.clientEmail,
       masterName,
       serviceName: serviceName(ctx, opts.masterLocale),
       whenLabel: whenMaster,
-      notes: opts.notes,
+      notes: redactContactText(opts.notes),
     }),
   )
 

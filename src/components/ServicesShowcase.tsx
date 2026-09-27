@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { ArrowUpRight } from 'lucide-react'
 import { useLang } from '../i18n/LanguageContext'
 import { api } from '../lib/api'
+import { formatPriceLabel } from '../lib/priceLabel'
 import { NeonHeart } from './NeonHeart'
 import './ServicesShowcase.css'
 
@@ -12,6 +13,7 @@ type Service = {
   name: { ru: string; de: string }
   description: { ru: string; de: string }
   price: number
+  priceMax?: number | null
   duration: number
   image: string
   featured: boolean
@@ -63,7 +65,7 @@ export function ServicesShowcase() {
                   <div className="services__meta">
                     <span>{service.duration} min</span>
                     <span>
-                      {t.services.from} €{service.price}
+                      {service.priceMax ? formatPriceLabel(service.price, service.priceMax) : `${t.services.from} ${formatPriceLabel(service.price)}`}
                     </span>
                   </div>
                   <h3 className="serif">{service.name[locale]}</h3>

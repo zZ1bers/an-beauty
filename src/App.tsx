@@ -10,7 +10,6 @@ import { HashScroll } from './components/HashScroll'
 import { ScrollToTop } from './components/ScrollToTop'
 import { LandingPage } from './pages/LandingPage'
 import { BookingPage } from './pages/BookingPage'
-import { CabinetPage } from './pages/CabinetPage'
 import { StaffPage } from './pages/StaffPage'
 import { AdminPage } from './pages/AdminPage'
 import { LoginPage } from './pages/LoginPage'
@@ -33,14 +32,7 @@ function AnimatedRoutes() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/datenschutz" element={<DatenschutzPage />} />
         <Route path="/impressum" element={<ImpressumPage />} />
-        <Route
-          path="/cabinet"
-          element={
-            <RequireAuth roles={['CLIENT']}>
-              <CabinetPage />
-            </RequireAuth>
-          }
-        />
+        <Route path="/cabinet" element={<Navigate to="/" replace />} />
         <Route
           path={PORTAL_STAFF}
           element={

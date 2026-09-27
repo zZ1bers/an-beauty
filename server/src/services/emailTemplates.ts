@@ -515,8 +515,6 @@ export function buildBookingMasterNotifyEmail(
     { label: copy.service, value: input.serviceName },
     { label: copy.when, value: input.whenLabel },
   ]
-  if (input.clientPhone) rows.push({ label: copy.phone, value: input.clientPhone })
-  if (input.clientEmail) rows.push({ label: copy.email, value: input.clientEmail })
   if (input.notes?.trim()) rows.push({ label: copy.notes, value: input.notes.trim() })
 
   return emailShell({

@@ -124,6 +124,8 @@ model Service {
   descriptionRu String
   descriptionDe String
   price       Decimal  @db.Decimal(10, 2)
+  /// Optional upper bound — display as "70–180" when set
+  priceMax    Decimal? @db.Decimal(10, 2)
   durationMin Int
   imageUrl    String
   featured    Boolean  @default(false)
@@ -163,6 +165,7 @@ model Booking {
   guestFirstName String?
   guestLastName  String?
   guestPhone     String?
+  guestEmail     String?
   cancelledAt   DateTime?
   /// When day-before SMS reminder was sent
   reminderSmsSentAt DateTime?

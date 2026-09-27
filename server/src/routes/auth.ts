@@ -16,15 +16,6 @@ const loginSchema = z.object({
   password: z.string().min(1),
 })
 
-const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
-  phone: z.string().optional(),
-  locale: z.enum(['ru', 'de']).optional(),
-})
-
 const forgotSchema = z.object({
   email: z.string().email(),
   locale: z.enum(['ru', 'de']).optional(),
@@ -85,36 +76,8 @@ export async function authRoutes(app: FastifyInstance) {
     return { token, user: publicUser(user) }
   })
 
-  app.post('/auth/register', async (request, reply) => {
-    const body = registerSchema.safeParse(request.body)
-    if (!body.success) return reply.status(400).send({ error: 'Invalid body' })
-
-    const email = body.data.email.toLowerCase()
-    const exists = await prisma.user.findUnique({ where: { email } })
-    if (exists) return reply.status(409).send({ error: 'Email already registered' })
-
-    const passwordHash = await bcrypt.hash(body.data.password, 10)
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        role: Role.CLIENT,
-        firstName: body.data.firstName,
-        lastName: body.data.lastName,
-        phone: body.data.phone,
-        locale: body.data.locale ?? 'ru',
-        clientProfile: { create: {} },
-      },
-      include: { clientProfile: true, masterProfile: true },
-    })
-
-    const token = app.jwt.sign({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    })
-
-    return reply.status(201).send({ token, user: publicUser(user) })
+  app.post('/auth/register', async (_request, reply) => {
+    return reply.status(403).send({ error: 'Registration is closed' })
   })
 
   app.get('/auth/me', { preHandler: authenticate }, async (request, reply) => {

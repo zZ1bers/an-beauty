@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams, Link, useNavigate } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useLang } from '../i18n/LanguageContext'
-import { useAuth } from '../auth/AuthContext'
-import { api, ApiError, type AuthUser } from '../lib/api'
+import { api, ApiError } from '../lib/api'
+import { formatPriceLabel } from '../lib/priceLabel'
 import { addDays, localDateTime, salonDayOfWeek, todayISO } from '../lib/datetime'
 import { Footer } from '../components/Footer'
 import { Modal } from '../components/ui/Modal'
@@ -18,6 +18,7 @@ type Service = {
   name: { ru: string; de: string }
   description: { ru: string; de: string }
   price: number
+  priceMax?: number | null
   duration: number
   image: string
 }
@@ -69,14 +70,17 @@ function promoForService(serviceId: string, promos: ActivePromo[]) {
 
 function ServicePrice({
   price,
+  priceMax,
   duration,
   discountPct,
 }: {
   price: number
+  priceMax?: number | null
   duration?: number
   discountPct: number | null
 }) {
-  if (discountPct) {
+  const label = formatPriceLabel(price, priceMax)
+  if (discountPct && priceMax == null) {
     const next = discountedPrice(price, discountPct)
     return (
       <span className="booking__price">
@@ -89,7 +93,7 @@ function ServicePrice({
   }
   return (
     <span className="booking__price">
-      €{price}
+      {label}
       {duration != null && <span className="booking__price-dur"> · {duration} min</span>}
     </span>
   )
@@ -112,8 +116,6 @@ function contactComplete(c: ContactForm) {
 
 export function BookingPage() {
   const { t, locale } = useLang()
-  const { user, acceptSession, refresh } = useAuth()
-  const navigate = useNavigate()
   const [params] = useSearchParams()
   const initialMaster = params.get('master') ?? ''
   const initialService = params.get('service') ?? ''
@@ -141,8 +143,6 @@ export function BookingPage() {
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [authModalOpen, setAuthModalOpen] = useState(false)
-  const [showContact, setShowContact] = useState(false)
   const [contact, setContact] = useState<ContactForm>({
     firstName: '',
     lastName: '',
@@ -167,18 +167,6 @@ export function BookingPage() {
       }
     })
   }, [initialService])
-
-  useEffect(() => {
-    if (user?.role === 'CLIENT') {
-      setContact((prev) => ({
-        firstName: user.firstName || prev.firstName,
-        lastName: user.lastName || prev.lastName,
-        email: user.email || prev.email,
-        phone: user.phone || prev.phone,
-      }))
-      if (!user.phone) setShowContact(true)
-    }
-  }, [user])
 
   useEffect(() => {
     if (!masterId) {
@@ -361,6 +349,7 @@ export function BookingPage() {
         <strong className="serif">{s.name[locale]}</strong>
         <ServicePrice
           price={s.price}
+          priceMax={s.priceMax}
           duration={s.duration}
           discountPct={promoForService(s.id, promos)}
         />
@@ -408,56 +397,16 @@ export function BookingPage() {
       </div>
     ) : null
 
-  const needsContact =
-    showContact ||
-    !user ||
-    (user.role === 'CLIENT' && (!user.phone || !user.firstName || !user.lastName))
-
   const placeBooking = async () => {
+    if (!contactComplete(contact)) {
+      setError(t.booking.contactHint)
+      return
+    }
     setBusy(true)
     setError('')
     try {
       const startsAt = localDateTime(date, slot)
-
-      if (user?.role === 'CLIENT') {
-        if (needsContact) {
-          if (!contactComplete(contact)) {
-            setError(t.booking.contactHint)
-            setShowContact(true)
-            return
-          }
-          await api('/me', {
-            method: 'PATCH',
-            body: JSON.stringify({
-              firstName: contact.firstName.trim(),
-              lastName: contact.lastName.trim(),
-              phone: contact.phone.trim(),
-            }),
-          })
-          await refresh()
-        }
-
-        await api('/bookings', {
-          method: 'POST',
-          body: JSON.stringify({
-            serviceId,
-            masterId,
-            startsAt: startsAt.toISOString(),
-            notes: notes.trim() || undefined,
-            locale,
-          }),
-        })
-        setDone(true)
-        return
-      }
-
-      if (!contactComplete(contact)) {
-        setError(t.booking.contactHint)
-        setShowContact(true)
-        return
-      }
-
-      const data = await api<{ token: string; user: AuthUser }>('/bookings/guest', {
+      await api('/bookings/guest', {
         method: 'POST',
         auth: false,
         body: JSON.stringify({
@@ -472,35 +421,15 @@ export function BookingPage() {
           locale,
         }),
       })
-      acceptSession(data.token, data.user)
       setDone(true)
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : 'Error'
-      if (msg === 'EMAIL_EXISTS') {
-        setError(t.booking.emailExists)
-      } else {
-        setError(msg)
-      }
+      setError(e instanceof ApiError ? e.message : 'Error')
     } finally {
       setBusy(false)
     }
   }
 
   const confirm = async () => {
-    if (user && user.role !== 'CLIENT') {
-      setError(t.booking.clientsOnly)
-      return
-    }
-
-    if (!user) {
-      if (!showContact) {
-        setAuthModalOpen(true)
-        return
-      }
-      await placeBooking()
-      return
-    }
-
     await placeBooking()
   }
 
@@ -680,64 +609,61 @@ export function BookingPage() {
                       {selectedService && (
                         <ServicePrice
                           price={selectedService.price}
+                          priceMax={selectedService.priceMax}
                           discountPct={selectedDiscount}
                         />
                       )}
                     </div>
                   </div>
 
-                  {(showContact || (user?.role === 'CLIENT' && !user.phone)) && (
-                    <div className="booking__contact">
-                      <h4 className="booking__contact-title">{t.booking.contactTitle}</h4>
-                      <p className="booking__contact-hint">{t.booking.contactHint}</p>
-                      <div className="booking__contact-grid portal-form">
-                        <label>
-                          {t.booking.firstName}
-                          <input
-                            value={contact.firstName}
-                            onChange={(e) =>
-                              setContact({ ...contact, firstName: e.target.value })
-                            }
-                            required
-                          />
-                        </label>
-                        <label>
-                          {t.booking.lastName}
-                          <input
-                            value={contact.lastName}
-                            onChange={(e) =>
-                              setContact({ ...contact, lastName: e.target.value })
-                            }
-                            required
-                          />
-                        </label>
-                        {!user && (
-                          <label>
-                            {t.booking.email}
-                            <input
-                              type="email"
-                              value={contact.email}
-                              onChange={(e) =>
-                                setContact({ ...contact, email: e.target.value })
-                              }
-                              required
-                            />
-                          </label>
-                        )}
-                        <label>
-                          {t.booking.phone}
-                          <input
-                            type="tel"
-                            value={contact.phone}
-                            onChange={(e) =>
-                              setContact({ ...contact, phone: e.target.value })
-                            }
-                            required
-                          />
-                        </label>
-                      </div>
+                  <div className="booking__contact">
+                    <h4 className="booking__contact-title">{t.booking.contactTitle}</h4>
+                    <p className="booking__contact-hint">{t.booking.contactHint}</p>
+                    <div className="booking__contact-grid portal-form">
+                      <label>
+                        {t.booking.firstName}
+                        <input
+                          value={contact.firstName}
+                          onChange={(e) =>
+                            setContact({ ...contact, firstName: e.target.value })
+                          }
+                          required
+                        />
+                      </label>
+                      <label>
+                        {t.booking.lastName}
+                        <input
+                          value={contact.lastName}
+                          onChange={(e) =>
+                            setContact({ ...contact, lastName: e.target.value })
+                          }
+                          required
+                        />
+                      </label>
+                      <label>
+                        {t.booking.email}
+                        <input
+                          type="email"
+                          value={contact.email}
+                          onChange={(e) =>
+                            setContact({ ...contact, email: e.target.value })
+                          }
+                          required
+                        />
+                      </label>
+                      <label>
+                        {t.booking.phone}
+                        <input
+                          type="tel"
+                          value={contact.phone}
+                          onChange={(e) =>
+                            setContact({ ...contact, phone: e.target.value })
+                          }
+                          required
+                        />
+                      </label>
                     </div>
-                  )}
+                  </div>
 
                   <label className="portal-form booking__notes">
                     {t.booking.comment}
@@ -792,10 +718,7 @@ export function BookingPage() {
               <h2 className="display">{t.booking.success}</h2>
               <p>{t.booking.successBody}</p>
               <div className="booking__success-actions">
-                <Link to="/cabinet" className="btn btn-primary">
-                  {t.nav.cabinet}
-                </Link>
-                <Link to="/" className="btn btn-ghost">
+                <Link to="/" className="btn btn-primary">
                   AN.Beauty
                 </Link>
               </div>
@@ -804,36 +727,6 @@ export function BookingPage() {
         </AnimatePresence>
       </div>
       </div>
-
-      <Modal
-        open={authModalOpen}
-        title={t.booking.authTitle}
-        onClose={() => setAuthModalOpen(false)}
-      >
-        <p className="booking__auth-body">{t.booking.authBody}</p>
-        <div className="booking__auth-actions">
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => {
-              setAuthModalOpen(false)
-              navigate('/login', { state: { from: '/booking', mode: 'register' } })
-            }}
-          >
-            {t.booking.authRegister}
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => {
-              setAuthModalOpen(false)
-              setShowContact(true)
-            }}
-          >
-            {t.booking.authGuest}
-          </button>
-        </div>
-      </Modal>
 
       <Modal
         open={!!detailService}
@@ -845,11 +738,12 @@ export function BookingPage() {
           <div className="booking__detail">
             <img src={detailService.image} alt="" className="booking__detail-img" />
             <p className="booking__detail-meta">
-              <ServicePrice
-                price={detailService.price}
-                duration={detailService.duration}
-                discountPct={promoForService(detailService.id, promos)}
-              />
+            <ServicePrice
+              price={detailService.price}
+              priceMax={detailService.priceMax}
+              duration={detailService.duration}
+              discountPct={promoForService(detailService.id, promos)}
+            />
             </p>
             <p className="booking__detail-body">{detailService.description[locale]}</p>
             <div className="booking__detail-actions">

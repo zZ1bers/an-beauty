@@ -117,5 +117,5 @@ export function useAuth() {
 export function homeForRole(role: Role) {
   if (role === 'ADMIN') return PORTAL_ADMIN
   if (role === 'MASTER') return PORTAL_STAFF
-  return '/cabinet'
+  return '/'
 }

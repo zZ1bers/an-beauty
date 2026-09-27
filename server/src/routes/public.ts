@@ -1,7 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import bcrypt from 'bcryptjs'
-import { randomBytes } from 'node:crypto'
-import { BookingStatus, Role } from '@prisma/client'
+import { BookingStatus } from '@prisma/client'
 import { z } from 'zod'
 import { prisma } from '../db.js'
 import { getAvailabilityRange, getAvailableSlots, resolveBookableSlot } from '../services/booking.js'
@@ -19,6 +17,7 @@ function mapService(s: {
   descriptionRu: string
   descriptionDe: string
   price: { toString(): string } | number
+  priceMax?: { toString(): string } | number | null
   durationMin: number
   imageUrl: string
   featured: boolean
@@ -30,6 +29,7 @@ function mapService(s: {
     name: { ru: s.nameRu, de: s.nameDe },
     description: { ru: s.descriptionRu, de: s.descriptionDe },
     price: Number(s.price),
+    priceMax: s.priceMax != null ? Number(s.priceMax) : null,
     duration: s.durationMin,
     image: s.imageUrl,
     featured: s.featured,
@@ -229,6 +229,7 @@ export async function publicRoutes(app: FastifyInstance) {
     }))
   })
 
+  /** Guest booking: name, email, phone — no client account. */
   app.post('/bookings/guest', async (request, reply) => {
     const body = z
       .object({
@@ -244,12 +245,6 @@ export async function publicRoutes(app: FastifyInstance) {
       })
       .safeParse(request.body)
     if (!body.success) return reply.status(400).send({ error: 'Invalid body' })
-
-    const email = body.data.email.toLowerCase()
-    const exists = await prisma.user.findUnique({ where: { email } })
-    if (exists) {
-      return reply.status(409).send({ error: 'EMAIL_EXISTS' })
-    }
 
     const startsAt = new Date(body.data.startsAt)
     let service
@@ -269,24 +264,6 @@ export async function publicRoutes(app: FastifyInstance) {
       return reply.status(409).send({ error: msg })
     }
 
-    const passwordHash = await bcrypt.hash(randomBytes(24).toString('hex'), 10)
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        role: Role.CLIENT,
-        firstName: body.data.firstName.trim(),
-        lastName: body.data.lastName.trim(),
-        phone: body.data.phone.trim(),
-        locale: body.data.locale ?? 'ru',
-        clientProfile: { create: {} },
-      },
-      include: { clientProfile: true, masterProfile: true },
-    })
-
-    const profile = user.clientProfile
-    if (!profile) return reply.status(500).send({ error: 'Profile missing' })
-
     const priced = await resolvePromoPrice(service.id, service.price)
 
     const master = await prisma.masterProfile.findUnique({
@@ -295,9 +272,13 @@ export async function publicRoutes(app: FastifyInstance) {
     })
     if (!master) return reply.status(404).send({ error: 'Master not found' })
 
+    const guestEmail = body.data.email.trim().toLowerCase()
+    const guestPhone = body.data.phone.trim()
+    const locale = (body.data.locale ?? 'ru') as BookingLocale
+
     const booking = await prisma.booking.create({
       data: {
-        clientId: profile.id,
+        clientId: null,
         masterId: body.data.masterId,
         serviceId: service.id,
         startsAt,
@@ -305,7 +286,10 @@ export async function publicRoutes(app: FastifyInstance) {
         status: BookingStatus.CONFIRMED,
         priceSnapshot: priced.price,
         notes: body.data.notes?.trim() || null,
-        createdBy: user.id,
+        guestFirstName: body.data.firstName.trim(),
+        guestLastName: body.data.lastName.trim(),
+        guestPhone,
+        guestEmail,
       },
       include: {
         service: true,
@@ -313,15 +297,14 @@ export async function publicRoutes(app: FastifyInstance) {
       },
     })
 
-    const locale = (user.locale ?? 'ru') as BookingLocale
     await notifyBookingCreated({
       bookingId: booking.id,
       locale,
-      clientUserId: user.id,
-      clientEmail: user.email,
-      clientPhone: user.phone,
-      clientFirstName: user.firstName,
-      clientLastName: user.lastName,
+      clientUserId: null,
+      clientEmail: guestEmail,
+      clientPhone: guestPhone,
+      clientFirstName: body.data.firstName.trim(),
+      clientLastName: body.data.lastName.trim(),
       masterUserId: master.userId,
       masterEmail: master.user.email,
       masterLocale: (master.user.locale ?? 'ru') as BookingLocale,
@@ -334,25 +317,7 @@ export async function publicRoutes(app: FastifyInstance) {
       notes: body.data.notes?.trim() || null,
     })
 
-    const token = app.jwt.sign({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    })
-
     return reply.status(201).send({
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        phone: user.phone,
-        locale: user.locale,
-        clientProfileId: user.clientProfile?.id ?? null,
-        masterProfileId: user.masterProfile?.id ?? null,
-      },
       booking: {
         id: booking.id,
         startsAt: booking.startsAt.toISOString(),

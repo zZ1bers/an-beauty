@@ -45,6 +45,7 @@ import { Modal, confirmAction } from '../components/ui/Modal'
 import { useToast } from '../components/ui/Toast'
 import { ImageUpload } from '../components/ui/ImageUpload'
 import { DatePicker } from '../components/booking/DatePicker'
+import { formatPriceInput, formatPriceLabel, parsePriceInput } from '../lib/priceLabel'
 import { AdminQuickBook } from '../components/admin/AdminQuickBook'
 import './Portal.css'
 
@@ -158,6 +159,7 @@ type ServiceRow = {
   description: { ru: string; de: string }
   image: string
   price: number
+  priceMax?: number | null
   duration: number
   featured: boolean
   isActive: boolean
@@ -277,7 +279,7 @@ const emptyService = {
   nameDe: '',
   descriptionRu: '',
   descriptionDe: '',
-  price: 100,
+  priceText: '100',
   durationMin: 60,
   imageUrl: '',
   featured: false,
@@ -700,7 +702,7 @@ export function AdminPage() {
       nameDe: s.name.de,
       descriptionRu: s.description.ru,
       descriptionDe: s.description.de,
-      price: s.price,
+      priceText: formatPriceInput(s.price, s.priceMax),
       durationMin: s.duration,
       imageUrl: s.image,
       featured: s.featured,
@@ -711,12 +713,19 @@ export function AdminPage() {
 
   const saveService = async (e: FormEvent) => {
     e.preventDefault()
+    const parsedPrice = parsePriceInput(serviceForm.priceText)
+    if (!parsedPrice) {
+      toast.push(t.admin.priceRangeError, 'err')
+      return
+    }
+    const { priceText: _priceText, ...rest } = serviceForm
+    const payload = { ...rest, price: parsedPrice.price, priceMax: parsedPrice.priceMax }
     setSaving(true)
     try {
       if (serviceModal === 'create') {
-        await api('/admin/services', { method: 'POST', body: JSON.stringify(serviceForm) })
+        await api('/admin/services', { method: 'POST', body: JSON.stringify(payload) })
       } else if (editingServiceId) {
-        const { slug: _slug, ...patch } = serviceForm
+        const { slug: _slug, ...patch } = payload
         await api(`/admin/services/${editingServiceId}`, {
           method: 'PATCH',
           body: JSON.stringify(patch),
@@ -1481,10 +1490,10 @@ export function AdminPage() {
                         {s.isActive && s.featured ? ` · ${t.admin.featured}` : ''}
                       </strong>
                       <span>
-                        €{s.price} · {s.duration} min
+                        {formatPriceLabel(s.price, s.priceMax)} · {s.duration} min
                       </span>
                     </div>
-                    <em>€{s.price}</em>
+                    <em>{formatPriceLabel(s.price, s.priceMax)}</em>
                     <div className="admin__row-actions">
                       {!s.isActive && (
                         <button
@@ -1969,11 +1978,15 @@ export function AdminPage() {
             <label>
               {t.admin.priceEuro}
               <input
-                type="number"
                 required
-                value={serviceForm.price}
-                onChange={(e) => setServiceForm({ ...serviceForm, price: Number(e.target.value) })}
+                inputMode="decimal"
+                placeholder="70-180"
+                value={serviceForm.priceText}
+                onChange={(e) => setServiceForm({ ...serviceForm, priceText: e.target.value })}
               />
+              <span className="portal__hint" style={{ textTransform: 'none', letterSpacing: 0 }}>
+                {t.admin.priceRangeHint}
+              </span>
             </label>
             <label>
               {t.admin.durationMin}
