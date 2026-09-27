@@ -39,7 +39,7 @@ export function AboutSalon() {
         >
           <img
             className="manifesto__photo"
-            src="https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=1400&q=85"
+            src="/about-care.png"
             alt=""
           />
           <img
@@ -49,7 +49,7 @@ export function AboutSalon() {
           />
           <img
             className="manifesto__accent manifesto__accent--br"
-            src="https://images.unsplash.com/photo-1519823551278-64ac92734fb1?w=600&q=80"
+            src="/about-products.png"
             alt=""
           />
         </motion.div>
